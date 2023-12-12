@@ -1,5 +1,5 @@
 [package]
-name = "libsql-migrate"
+name = "geni"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
+chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.4.11", features = ["env", "string", "derive", "cargo"] }
