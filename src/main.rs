@@ -2,6 +2,7 @@ use clap::{Arg, ArgAction, Command};
 
 use crate::generate::generate_new_migration;
 
+mod config;
 mod generate;
 
 fn main() {
