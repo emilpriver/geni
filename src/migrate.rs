@@ -5,6 +5,7 @@ use anyhow::{bail, Result};
 use clap::ArgMatches;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn get_paths(folder: &PathBuf, ending: &str) -> Vec<PathBuf> {
     let entries = fs::read_dir(folder).unwrap();
@@ -49,7 +50,7 @@ pub async fn up(query_matches: &ArgMatches) -> Result<()> {
 
     let database = database_drivers::new(database_url).unwrap();
 
-    let migrations = database.get_or_create_schema_migrations().await.unwrap();
+    let migrations = database.get_or_create_schema_migrations().await?;
 
     for f in files {
         let id = f
