@@ -11,6 +11,7 @@ async-trait = "0.1.74"
 chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.4.11", features = ["env", "string", "derive", "cargo"] }
 libsql-client = { version = "0.33.2", features = ["futures-util"] }
+tokio = { version = "1.35.0", features = ["full"] }
 
 [dev-dependencies]
 tempfile = "3.8.1"

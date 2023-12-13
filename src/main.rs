@@ -1,12 +1,12 @@
 use clap::{Arg, ArgAction, Command};
 
 mod config;
-mod database;
+mod database_drivers;
 mod generate;
-mod libsql_driver;
 mod migrate;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let matches = Command::new("libsql-migeate")
         .about("Migrate tool for libsql")
         .version("1.0.0")
@@ -22,7 +22,16 @@ fn main() {
                     .action(ArgAction::Set)
                     .num_args(1),
             ),
-            Command::new("up").about("Migrate to the latest version"),
+            Command::new("up")
+                .about("Migrate to the latest version")
+                .arg(
+                    Arg::new("url")
+                        .short('u')
+                        .long("url")
+                        .help("Database URL")
+                        .action(ArgAction::Set)
+                        .num_args(0..1),
+                ),
         ])
         .get_matches();
 
@@ -32,8 +41,8 @@ fn main() {
             let new = generate::generate_new_migration(name);
             println!("{:?}", &new);
         }
-        Some(("up", _)) => {
-            match migrate::up() {
+        Some(("up", query_matches)) => {
+            match migrate::up(query_matches).await {
                 Err(err) => {
                     println!("{:?}", err)
                 }
