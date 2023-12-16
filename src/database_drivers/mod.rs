@@ -10,8 +10,8 @@ pub mod postgres;
 
 #[async_trait]
 pub trait DatabaseDriver {
-    async fn execute(self, query: &str) -> Result<()>;
-    async fn get_or_create_schema_migrations(self) -> Result<Vec<String>>;
+    async fn execute(&self, query: &str) -> Result<()>;
+    async fn get_or_create_schema_migrations(&self) -> Result<Vec<String>>;
 }
 
 fn print_serialized_trait_object<T: Serialize>(t: &T) {

@@ -13,12 +13,12 @@ impl PostgresDriver {
 #[async_trait]
 impl DatabaseDriver for PostgresDriver {
     // execute query with the provided database
-    async fn execute(self, query: &str) -> Result<()> {
+    async fn execute(&self, query: &str) -> Result<()> {
         Ok(())
     }
 
     // execute query with the provided database
-    async fn get_or_create_schema_migrations(self) -> Result<Vec<String>> {
+    async fn get_or_create_schema_migrations(&self) -> Result<Vec<String>> {
         Ok(vec![])
     }
 }
