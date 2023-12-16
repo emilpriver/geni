@@ -1,6 +1,7 @@
 use crate::config::database_url;
 use crate::config::migration_folder;
 use crate::database_drivers;
+use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use clap::ArgMatches;
 use std::fs;
@@ -31,7 +32,7 @@ fn read_file_content(path: &PathBuf) -> String {
     content.replace("\n", "")
 }
 
-pub async fn up(query_matches: &ArgMatches) -> Result<()> {
+pub async fn up() -> Result<()> {
     let folder = migration_folder();
     let path = PathBuf::from(&folder);
     let files = get_paths(&path, "up");
@@ -43,12 +44,12 @@ pub async fn up(query_matches: &ArgMatches) -> Result<()> {
         );
     }
 
-    let database_url = match database_url(Some(query_matches)) {
+    let database_url = match database_url() {
         Ok(d) => d,
         Err(err) => bail!("{}", err),
     };
 
-    let database = database_drivers::new(database_url).unwrap();
+    let database = Arc::clone(&database_drivers::new(database_url.as_str()).await.unwrap());
 
     let migrations = database.get_or_create_schema_migrations().await?;
 

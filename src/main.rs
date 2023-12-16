@@ -22,16 +22,7 @@ async fn main() {
                     .action(ArgAction::Set)
                     .num_args(1),
             ),
-            Command::new("up")
-                .about("Migrate to the latest version")
-                .arg(
-                    Arg::new("url")
-                        .short('u')
-                        .long("url")
-                        .help("Database URL")
-                        .action(ArgAction::Set)
-                        .num_args(0..1),
-                ),
+            Command::new("up").about("Migrate to the latest version"),
         ])
         .get_matches();
 
@@ -41,8 +32,8 @@ async fn main() {
             let new = generate::generate_new_migration(name);
             println!("{:?}", &new);
         }
-        Some(("up", query_matches)) => {
-            match migrate::up(query_matches).await {
+        Some(("up", ..)) => {
+            match migrate::up().await {
                 Err(err) => {
                     println!("{:?}", err)
                 }

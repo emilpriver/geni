@@ -1,22 +1,17 @@
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use libsql_client::{
-    de,
-    http::{Client, InnerClient},
-    Config,
-};
+use libsql_client::{de, Client, Config};
 
 pub struct LibSQLDriver {
     db: Client,
 }
 
 impl LibSQLDriver {
-    pub fn new(db_url: &str, token: &str) -> Result<LibSQLDriver> {
-        let inner_client = InnerClient::Default;
+    pub async fn new(db_url: &str, token: &str) -> Result<LibSQLDriver> {
         let config = Config::new(db_url)?.with_auth_token(token);
 
-        let client = match Client::from_config(inner_client, config) {
+        let client = match libsql_client::Client::from_config(config).await {
             Ok(c) => c,
             Err(err) => bail!("{:?}", err),
         };
@@ -28,11 +23,10 @@ impl LibSQLDriver {
 #[async_trait]
 impl DatabaseDriver for LibSQLDriver {
     // execute query with the provided database
-    async fn execute(self, content: &str) -> Result<()> {
-        match self.db.execute(content).await {
-            Ok(..) => Ok(()),
-            Err(err) => bail!("{:?}", err),
-        }
+    async fn execute(self, query: &str) -> Result<()> {
+        self.db.execute(query).await?;
+
+        Ok(())
     }
 
     // execute query with the provided database

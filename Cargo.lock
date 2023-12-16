@@ -676,6 +676,8 @@ dependencies = [
  "chrono",
  "clap",
  "libsql-client",
+ "serde",
+ "serde_json",
  "tempfile",
  "tokio",
 ]
@@ -1025,6 +1027,7 @@ dependencies = [
  "futures-util",
  "hrana-client",
  "hrana-client-proto",
+ "http",
  "libsql",
  "num-traits",
  "reqwest",
