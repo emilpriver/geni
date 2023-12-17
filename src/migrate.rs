@@ -1,12 +1,10 @@
 use crate::config::database_url;
 use crate::config::migration_folder;
 use crate::database_drivers;
-use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
-use clap::ArgMatches;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::vec;
 
 fn get_paths(folder: &PathBuf, ending: &str) -> Vec<PathBuf> {
     let entries = fs::read_dir(folder).unwrap();
@@ -37,32 +35,36 @@ pub async fn up() -> Result<()> {
     let path = PathBuf::from(&folder);
     let files = get_paths(&path, "up");
 
-    if files.len() == 0 {
+    if files.is_empty() {
         bail!(
             "Didn't find any files ending with .up.sql at {}. Does the path exist?",
             folder
         );
     }
 
-    let database_url = match database_url() {
-        Ok(d) => d,
-        Err(err) => bail!("{}", err),
-    };
-
-    let database = Arc::clone(&database_drivers::new(database_url.as_str()).await.unwrap());
-
-    let migrations = database.get_or_create_schema_migrations().await?;
+    let database_url = database_url()?;
+    let database = database_drivers::new(&database_url).await?;
+    let migrations: Vec<String> = database
+        .get_or_create_schema_migrations()
+        .await?
+        .into_iter()
+        .map(|s| s.into_boxed_str())
+        .collect::<Vec<Box<str>>>()
+        .into_iter()
+        .map(|s| s.into())
+        .collect();
 
     for f in files {
-        let id = f
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .split_once("_")
-            .unwrap()
-            .0
-            .to_string();
+        let id = Box::new(
+            f.file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .split_once("_")
+                .unwrap()
+                .0
+                .to_string(),
+        );
 
         if !migrations.contains(&id) {
             let query = read_file_content(&f);

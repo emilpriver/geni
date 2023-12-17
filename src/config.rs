@@ -1,5 +1,4 @@
 use anyhow::{bail, Result};
-use clap::ArgMatches;
 use std::env;
 
 pub fn migration_folder() -> String {

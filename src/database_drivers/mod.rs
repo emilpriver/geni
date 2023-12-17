@@ -1,47 +1,31 @@
-use std::sync::Arc;
-
 use crate::config;
-use anyhow::{bail, Result};
-use async_trait::async_trait;
-use serde::Serialize;
+use std::future::Future;
 
 pub mod libsql;
-pub mod postgres;
 
-#[async_trait]
-pub trait DatabaseDriver {
-    async fn execute(&self, query: &str) -> Result<()>;
-    async fn get_or_create_schema_migrations(&self) -> Result<Vec<String>>;
+// DatabaseDriver is a trait that all database drivers must implement
+pub trait DatabaseDriver<'a> {
+    fn execute(
+        &'a self,
+        query: &str,
+    ) -> Box<dyn Future<Output = Result<(), anyhow::Error>> + Unpin>;
+    fn get_or_create_schema_migrations(
+        &'a self,
+    ) -> Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + Unpin>;
 }
 
-fn print_serialized_trait_object<T: Serialize>(t: &T) {
-    let serialized = serde_json::to_string(t).unwrap();
-    println!("{}", serialized);
-}
+// TODO: add Clone to DatabaseDriver
 
-pub async fn new(db_url: &str) -> Result<Arc<dyn DatabaseDriver>> {
+// Creates a new database driver based on the database_url
+pub async fn new(db_url: &str) -> Result<Box<dyn DatabaseDriver>, anyhow::Error> {
+    // the database_url is starting with "libsql" if the libsql driver is used
     if db_url.starts_with("libsql") {
-        let token = match config::database_token() {
-            Ok(t) => t,
-            Err(err) => bail!("{}", err),
-        };
+        let token = config::database_token()?;
 
-        let client = match libsql::LibSQLDriver::new(db_url, token.as_str()).await {
-            Ok(c) => c,
-            Err(err) => bail!("{:?}", err),
-        };
+        let client = libsql::LibSQLDriver::new(db_url, token.as_str()).await?;
 
-        return Ok(Arc::new(client));
+        return Ok(Box::new(client));
     }
 
-    if db_url.starts_with("postgressql") {
-        let client = match postgres::PostgresDriver::new(db_url).await {
-            Ok(c) => c,
-            Err(err) => bail!("{:?}", err),
-        };
-
-        return Ok(Arc::new(client));
-    }
-
-    bail!("No matching database")
+    unimplemented!("Database driver not implemented")
 }

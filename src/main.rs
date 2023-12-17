@@ -37,7 +37,7 @@ async fn main() {
                 Err(err) => {
                     println!("{:?}", err)
                 }
-                _ => {}
+                Ok(_) => todo!(),
             };
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable
