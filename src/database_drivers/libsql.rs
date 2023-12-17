@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use libsql_client::{de, Client, Config};
 
 pub struct LibSQLDriver {
-    db: Arc<Client>,
+    db: Client,
 }
 
 impl LibSQLDriver {
@@ -21,9 +21,7 @@ impl LibSQLDriver {
             Err(err) => bail!("{:?}", err),
         };
 
-        Ok(LibSQLDriver {
-            db: Arc::new(client),
-        })
+        Ok(LibSQLDriver { db: client })
     }
 }
 
@@ -33,9 +31,7 @@ impl DatabaseDriver for LibSQLDriver {
      * execute query with the provided database
      */
     async fn execute(&self, query: &str) -> Result<()> {
-        let client: Arc<libsql_client::Client> = Arc::clone(&self.db);
-
-        match client.execute(query).await {
+        match self.db.execute(query).await {
             Ok(r) => Ok(()),
             Err(err) => bail!("{:?}", err),
         }
@@ -45,8 +41,8 @@ impl DatabaseDriver for LibSQLDriver {
      * execute query with the provided database
      */
     async fn get_or_create_schema_migrations(&self) -> Result<Vec<String>> {
-        let client: Arc<libsql_client::Client> = Arc::clone(&self.db);
-        let res = match client
+        let res = match &self
+            .db
             .execute(
                 r"
                 CREATE TABLE IF NOT EXISTS schema_migrations (
