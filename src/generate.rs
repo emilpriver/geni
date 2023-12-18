@@ -28,7 +28,7 @@ pub fn generate_new_migration(migration_name: &str) -> Result<()> {
             Ok(f) => f,
             Err(err) => bail!(err),
         };
-        match file.write_all(format!("Write your {f} sql migration here").as_bytes()) {
+        match file.write_all(format!("-- Write your {f} sql migration here").as_bytes()) {
             Err(err) => bail!(err),
             _ => {}
         };

@@ -44,6 +44,7 @@ pub async fn up() -> Result<()> {
 
     let database_url = database_url()?;
     let database = database_drivers::new(&database_url).await?;
+
     let migrations: Vec<String> = database
         .get_or_create_schema_migrations()
         .await?
@@ -67,8 +68,12 @@ pub async fn up() -> Result<()> {
         );
 
         if !migrations.contains(&id) {
+            println!("Running migration {}", id);
             let query = read_file_content(&f);
-            println!("{:?}", query);
+
+            database.execute(&query).await?;
+
+            database.insert_schema_migration(&id).await?;
         }
     }
 
