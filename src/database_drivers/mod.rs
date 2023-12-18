@@ -1,8 +1,14 @@
 use crate::config;
+use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::pin::Pin;
 
 pub mod libsql;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SchemaMigration {
+    pub id: String,
+}
 
 // DatabaseDriver is a trait that all database drivers must implement
 pub trait DatabaseDriver {
@@ -13,7 +19,7 @@ pub trait DatabaseDriver {
 
     fn get_or_create_schema_migrations(
         &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<SchemaMigration>, anyhow::Error>> + '_>>;
 
     fn insert_schema_migration<'a>(
         &'a self,

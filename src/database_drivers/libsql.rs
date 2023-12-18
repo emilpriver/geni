@@ -4,6 +4,8 @@ use libsql_client::{de, Client, Config};
 use std::future::Future;
 use std::pin::Pin;
 
+use super::SchemaMigration;
+
 pub struct LibSQLDriver {
     db: Client,
 }
@@ -34,17 +36,16 @@ impl DatabaseDriver for LibSQLDriver {
 
     fn get_or_create_schema_migrations(
         &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<SchemaMigration>, anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY);";
+            let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP);";
             self.db.execute(query).await?;
-            let query = "SELECT id FROM schema_migrations;";
+            let query = "SELECT id FROM schema_migrations ORDER BY timestamp DESC;";
             let result = self.db.execute(query).await?;
-            result
-                .rows
-                .iter()
-                .map(de::from_row)
-                .collect::<Result<Vec<String>>>()
+
+            let rows = result.rows.iter().map(de::from_row);
+
+            rows.collect::<Result<Vec<SchemaMigration>>>()
         };
 
         Box::pin(fut)

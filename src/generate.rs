@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::io::Write;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use chrono::Utc;
 
 use crate::config::migration_folder;
@@ -24,14 +24,9 @@ pub fn generate_new_migration(migration_name: &str) -> Result<()> {
             fs::create_dir_all(parent)?;
         }
 
-        let mut file = match File::create(path) {
-            Ok(f) => f,
-            Err(err) => bail!(err),
-        };
-        match file.write_all(format!("-- Write your {f} sql migration here").as_bytes()) {
-            Err(err) => bail!(err),
-            _ => {}
-        };
+        let mut file = File::create(path)?;
+
+        file.write_all(format!("-- Write your {f} sql migration here").as_bytes())?;
 
         println!("Generated {}", filename_str)
     }
