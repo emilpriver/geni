@@ -1,6 +1,5 @@
 use clap::{Arg, ArgAction, Command};
 use log::{error, info};
-use migrate::MigrationType;
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
 mod config;
@@ -34,7 +33,16 @@ async fn main() {
                     .num_args(1),
             ),
             Command::new("up").about("Migrate to the latest version"),
-            Command::new("down").about("Rollback to last migration"),
+            Command::new("down")
+                .about("Rollback to last migration")
+                .arg(
+                    Arg::new("amount")
+                        .short('a')
+                        .long("amount")
+                        .help("Amount of migrations to rollback")
+                        .action(ArgAction::Set)
+                        .num_args(1),
+                ),
         ])
         .get_matches();
 
@@ -49,15 +57,17 @@ async fn main() {
             };
         }
         Some(("up", ..)) => {
-            match migrate::migrate(MigrationType::Up).await {
+            match migrate::up().await {
                 Err(err) => {
                     error!("{:?}", err)
                 }
                 Ok(_) => info!("Success"),
             };
         }
-        Some(("down", ..)) => {
-            match migrate::migrate(MigrationType::Down).await {
+        Some(("down", query_matches)) => {
+            let rollback_amount = query_matches.get_one::<i64>("amount").unwrap_or(&1);
+
+            match migrate::down(rollback_amount).await {
                 Err(err) => {
                     error!("{:?}", err)
                 }
