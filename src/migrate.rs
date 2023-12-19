@@ -128,3 +128,61 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+    use std::io::Write;
+    use std::{env, fs::File, vec};
+    use tokio::test;
+
+    fn generate_migrations(migration_path: String) -> Result<()> {
+        let file_endings = vec!["up", "down"];
+        let timestamp = Utc::now().timestamp();
+
+        for f in file_endings {
+            let filename = format!("{migration_path}/{timestamp}_test.{f}.sql");
+            let filename_str = filename.as_str();
+            let path = std::path::Path::new(filename_str);
+
+            // Generate the folder if it don't exist
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            let mut file = File::create(path)?;
+
+            file.write_all(format!("-- Write your {f} sql migration here").as_bytes())?;
+
+            println!("Generated {}", filename_str)
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    async fn test_migrate() {
+        let tmp_dir = tempdir::TempDir::new("test_migrate").unwrap();
+        let migration_folder = tmp_dir.path();
+        let migration_folder_string = migration_folder.to_str().unwrap();
+
+        env::set_var("MIGRATION_DIR", migration_folder_string);
+
+        let db_urls = vec!["libsql://test.db"];
+
+        for url in db_urls {
+            env::set_var("DATABASE_URL", url);
+
+            generate_migrations(migration_folder_string.to_string()).unwrap();
+
+            let u = up().await;
+            println!("{:?}", u);
+            assert_eq!(u.is_ok(), true);
+
+            let d = down(&1).await;
+            println!("{:?}", d);
+            assert_eq!(d.is_ok(), true);
+        }
+    }
+}
