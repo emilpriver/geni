@@ -107,6 +107,7 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
         .collect::<Vec<Box<str>>>();
 
     panic!("Migrations: {:?}", migrations);
+    // FIXME: Allow to rollback more the 1 migration
 
     let last_migration = migrations.last().unwrap();
     let last_migration_int = last_migration.parse::<i64>().unwrap();
