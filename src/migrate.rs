@@ -1,5 +1,4 @@
-use crate::config::database_url;
-use crate::config::migration_folder;
+use crate::config::{database_driver, database_url, migration_folder};
 use crate::database_drivers;
 use anyhow::{bail, Result};
 use std::fs;
@@ -55,7 +54,8 @@ pub async fn up() -> Result<()> {
     }
 
     let database_url = database_url()?;
-    let database = database_drivers::new(&database_url).await?;
+    let driver = database_driver()?;
+    let database = database_drivers::new(driver, &database_url).await?;
 
     let migrations: Vec<String> = database
         .get_or_create_schema_migrations()
@@ -97,7 +97,8 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
     }
 
     let database_url = database_url()?;
-    let database = database_drivers::new(&database_url).await?;
+    let driver = database_driver()?;
+    let database = database_drivers::new(driver, &database_url).await?;
 
     let migrations = database
         .get_or_create_schema_migrations()
@@ -131,31 +132,41 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use crate::config::Database;
+
     use super::*;
     use chrono::Utc;
     use std::io::Write;
     use std::{env, fs::File, vec};
     use tokio::test;
 
-    fn generate_migrations(migration_path: String) -> Result<()> {
+    fn generate_test_migrations(migration_path: String) -> Result<()> {
         let file_endings = vec!["up", "down"];
         let timestamp = Utc::now().timestamp();
 
-        for f in file_endings {
-            let filename = format!("{migration_path}/{timestamp}_test.{f}.sql");
-            let filename_str = filename.as_str();
-            let path = std::path::Path::new(filename_str);
+        let test_queries = vec![
+            "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+            "CREATE TABLE users2 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+            "CREATE TABLE users3 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+        ];
 
-            // Generate the folder if it don't exist
-            if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent)?;
+        for (index, t) in test_queries.iter().enumerate() {
+            for f in &file_endings {
+                let filename = format!("{migration_path}/{timestamp}_{index}_test.{f}.sql");
+                let filename_str = filename.as_str();
+                let path = std::path::Path::new(filename_str);
+
+                // Generate the folder if it don't exist
+                if let Some(parent) = path.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+
+                let mut file = File::create(path)?;
+
+                file.write_all(t.as_bytes())?;
+
+                println!("Generated {}", filename_str)
             }
-
-            let mut file = File::create(path)?;
-
-            file.write_all(format!("-- Write your {f} sql migration here").as_bytes())?;
-
-            println!("Generated {}", filename_str)
         }
 
         Ok(())
@@ -169,12 +180,13 @@ mod tests {
 
         env::set_var("MIGRATION_DIR", migration_folder_string);
 
-        let db_urls = vec!["libsql://test.db"];
+        generate_test_migrations(migration_folder_string.to_string()).unwrap();
+
+        let db_urls = vec![(Database::LibSQL, "libsql://test")];
 
         for url in db_urls {
-            env::set_var("DATABASE_URL", url);
-
-            generate_migrations(migration_folder_string.to_string()).unwrap();
+            env::set_var("DATABASE", url.0.as_str());
+            env::set_var("DATABASE_URL", url.1);
 
             let u = up().await;
             println!("{:?}", u);

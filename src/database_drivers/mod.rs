@@ -33,15 +33,20 @@ pub trait DatabaseDriver {
 }
 
 // Creates a new database driver based on the database_url
-pub async fn new(db_url: &str) -> Result<Box<dyn DatabaseDriver>, anyhow::Error> {
+pub async fn new(
+    driver: config::Database,
+    db_url: &str,
+) -> Result<Box<dyn DatabaseDriver>, anyhow::Error> {
     // the database_url is starting with "libsql" if the libsql driver is used
-    if db_url.contains("libsql://") {
-        let token = config::database_token()?;
-
-        let client = libsql::LibSQLDriver::new(db_url, token.as_str()).await?;
-
-        return Ok(Box::new(client));
+    match driver {
+        config::Database::LibSQL => {
+            let token = config::database_token()?;
+            let driver = libsql::LibSQLDriver::new(db_url, &token).await?;
+            Ok(Box::new(driver))
+        }
+        config::Database::Postgres => unimplemented!("Postgres driver not implemented"),
+        config::Database::MariaDB => unimplemented!("MariaDB driver not implemented"),
+        config::Database::MySQL => unimplemented!("MySQL driver not implemented"),
+        config::Database::SQLite => unimplemented!("SQLite driver not implemented"),
     }
-
-    unimplemented!("Database driver not implemented")
 }
