@@ -103,28 +103,26 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
         .get_or_create_schema_migrations()
         .await?
         .into_iter()
-        .map(|s| s.id.into_boxed_str())
-        .collect::<Vec<Box<str>>>();
+        .map(|s| s.id.into_boxed_str().parse::<i64>().unwrap())
+        .collect::<Vec<i64>>();
 
-    panic!("Migrations: {:?}", migrations);
-    // FIXME: Allow to rollback more the 1 migration
+    let migrations_to_run = migrations.into_iter().take(*rollback_amount as usize);
 
-    let last_migration = migrations.last().unwrap();
-    let last_migration_int = last_migration.parse::<i64>().unwrap();
+    for migration in migrations_to_run {
+        let rollback_file = files.iter().find(|(timestamp, _)| timestamp == &migration);
 
-    let rollback_file = files
-        .iter()
-        .find(|(timestamp, _)| timestamp == &last_migration_int);
+        match rollback_file {
+            None => bail!("No rollback file found for {}", migration),
+            Some(f) => {
+                println!("Running rollback for {}", migration);
+                let query = read_file_content(&f.1);
 
-    match rollback_file {
-        None => bail!("No rollback file found for {}", last_migration_int),
-        Some(f) => {
-            println!("Running rollback for {}", last_migration_int);
-            let query = read_file_content(&f.1);
+                database.execute(&query).await?;
 
-            database.execute(&query).await?;
-
-            database.remove_schema_migration(&last_migration).await?;
+                database
+                    .remove_schema_migration(&migration.to_string().as_str())
+                    .await?;
+            }
         }
     }
 

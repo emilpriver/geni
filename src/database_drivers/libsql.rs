@@ -38,9 +38,9 @@ impl DatabaseDriver for LibSQLDriver {
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<SchemaMigration>, anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP);";
+            let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY);";
             self.db.execute(query).await?;
-            let query = "SELECT id FROM schema_migrations ORDER BY timestamp DESC;";
+            let query = "SELECT id FROM schema_migrations ORDER BY id DESC;";
             let result = self.db.execute(query).await?;
 
             let rows = result.rows.iter().map(de::from_row);

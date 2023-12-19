@@ -65,9 +65,13 @@ async fn main() {
             };
         }
         Some(("down", query_matches)) => {
-            let rollback_amount = query_matches.get_one::<i64>("amount").unwrap_or(&1);
+            let rollback_amount = query_matches
+                .get_one::<String>("amount")
+                .unwrap_or(&"1".to_string())
+                .parse::<i64>()
+                .expect("Couldn't parse amount, is it a number?");
 
-            match migrate::down(rollback_amount).await {
+            match migrate::down(&rollback_amount).await {
                 Err(err) => {
                     error!("{:?}", err)
                 }
