@@ -201,6 +201,8 @@ mod tests {
 
         let db_urls = vec![(Database::LibSQL, "http://localhost:6000")];
 
+        env::set_var("DATABASE_TOKEN", "not needed");
+
         for url in db_urls {
             env::set_var("DATABASE", url.0.as_str());
             env::set_var("DATABASE_URL", url.1);
