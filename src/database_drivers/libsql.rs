@@ -1,70 +1,81 @@
-use std::{
-    os::fd::AsFd,
-    sync::{Arc, Mutex},
-};
-
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
-use async_trait::async_trait;
 use libsql_client::{de, Client, Config};
+use std::future::Future;
+use std::pin::Pin;
+
+use super::SchemaMigration;
 
 pub struct LibSQLDriver {
     db: Client,
 }
 
-impl LibSQLDriver {
-    pub async fn new(db_url: &str, token: &str) -> Result<LibSQLDriver> {
+impl<'a> LibSQLDriver {
+    pub async fn new<'b>(db_url: &str, token: &str) -> Result<LibSQLDriver> {
         let config = Config::new(db_url)?.with_auth_token(token);
-
         let client = match libsql_client::Client::from_config(config).await {
             Ok(c) => c,
             Err(err) => bail!("{:?}", err),
         };
-
         Ok(LibSQLDriver { db: client })
     }
 }
 
-#[async_trait]
 impl DatabaseDriver for LibSQLDriver {
-    /**
-     * execute query with the provided database
-     */
-    async fn execute(&self, query: &str) -> Result<()> {
-        match self.db.execute(query).await {
-            Ok(r) => Ok(()),
-            Err(err) => bail!("{:?}", err),
-        }
-    }
-
-    /**
-     * execute query with the provided database
-     */
-    async fn get_or_create_schema_migrations(&self) -> Result<Vec<String>> {
-        let res = match &self
-            .db
-            .execute(
-                r"
-                CREATE TABLE IF NOT EXISTS schema_migrations (
-                    id VARCHAR NOT NULL PRIMARY KEY
-                );
-
-                SELECT id FROM schema_migrations;
-            ",
-            )
-            .await
-        {
-            Ok(r) => r
-                .rows
-                .iter()
-                .map(de::from_row)
-                .collect::<Result<Vec<String>>>(),
-            Err(err) => bail!("{:?}", err),
+    fn execute<'a>(
+        &'a self,
+        query: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            self.db.execute(query).await?;
+            Ok(())
         };
 
-        match res {
-            Ok(r) => Ok(r),
-            Err(err) => bail!("{:?}", err),
-        }
+        Box::pin(fut)
+    }
+
+    fn get_or_create_schema_migrations(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<SchemaMigration>, anyhow::Error>> + '_>> {
+        let fut = async move {
+            let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY);";
+            self.db.execute(query).await?;
+            let query = "SELECT id FROM schema_migrations ORDER BY id DESC;";
+            let result = self.db.execute(query).await?;
+
+            let rows = result.rows.iter().map(de::from_row);
+
+            rows.collect::<Result<Vec<SchemaMigration>>>()
+        };
+
+        Box::pin(fut)
+    }
+
+    fn insert_schema_migration<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            self.db
+                .execute(format!("INSERT INTO schema_migrations (id) VALUES ('{}');", id).as_str())
+                .await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn remove_schema_migration<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            self.db
+                .execute(format!("DELETE FROM schema_migrations WHERE id = '{}';", id).as_str())
+                .await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
     }
 }
