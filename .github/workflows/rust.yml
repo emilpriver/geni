@@ -11,11 +11,11 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
+    - name: Databases
+      run: docker compose up -d
     - name: Build
       run: cargo build --verbose
     - name: Run tests
