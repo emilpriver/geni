@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:12
+    command: ["postgres", "-c", "fsync=off", "-c", "max_connections=5000", "-c", "shared_buffers=250MB"]
+    environment:
+      - POSTGRES_DB=development
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mysecretpassword
+    ports:
+      - "6437:5432"
+  sqld:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    ports:
+      - "6000:8080"

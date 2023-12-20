@@ -142,16 +142,25 @@ mod tests {
 
     fn generate_test_migrations(migration_path: String) -> Result<()> {
         let file_endings = vec!["up", "down"];
-        let timestamp = Utc::now().timestamp();
-
         let test_queries = vec![
-            "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
-            "CREATE TABLE users2 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
-            "CREATE TABLE users3 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+            (
+                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+                "DROP TABLE users;",
+            ),
+            (
+                "CREATE TABLE users2 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+                "DROP TABLE users2;",
+            ),
+            (
+                "CREATE TABLE users3 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+                "DROP TABLE users3;",
+            ),
         ];
 
         for (index, t) in test_queries.iter().enumerate() {
             for f in &file_endings {
+                let timestamp = Utc::now().timestamp() + index as i64;
+
                 let filename = format!("{migration_path}/{timestamp}_{index}_test.{f}.sql");
                 let filename_str = filename.as_str();
                 let path = std::path::Path::new(filename_str);
@@ -163,7 +172,15 @@ mod tests {
 
                 let mut file = File::create(path)?;
 
-                file.write_all(t.as_bytes())?;
+                match *f {
+                    "up" => {
+                        file.write_all(t.0.as_bytes())?;
+                    }
+                    "down" => {
+                        file.write_all(t.1.as_bytes())?;
+                    }
+                    _ => {}
+                }
 
                 println!("Generated {}", filename_str)
             }
@@ -182,7 +199,7 @@ mod tests {
 
         generate_test_migrations(migration_folder_string.to_string()).unwrap();
 
-        let db_urls = vec![(Database::LibSQL, "libsql://test")];
+        let db_urls = vec![(Database::LibSQL, "http://localhost:6000")];
 
         for url in db_urls {
             env::set_var("DATABASE", url.0.as_str());

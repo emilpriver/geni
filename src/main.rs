@@ -41,7 +41,7 @@ async fn main() {
                         .long("amount")
                         .help("Amount of migrations to rollback")
                         .action(ArgAction::Set)
-                        .num_args(1),
+                        .num_args(0..=1),
                 ),
         ])
         .get_matches();
