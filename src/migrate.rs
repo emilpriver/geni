@@ -61,7 +61,7 @@ pub async fn up() -> Result<()> {
         .get_or_create_schema_migrations()
         .await?
         .into_iter()
-        .map(|s| s.id.into_boxed_str())
+        .map(|s| s.into_boxed_str())
         .collect::<Vec<Box<str>>>()
         .into_iter()
         .map(|s| s.into())
@@ -104,7 +104,7 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
         .get_or_create_schema_migrations()
         .await?
         .into_iter()
-        .map(|s| s.id.into_boxed_str().parse::<i64>().unwrap())
+        .map(|s| s.into_boxed_str().parse::<i64>().unwrap())
         .collect::<Vec<i64>>();
 
     let migrations_to_run = migrations.into_iter().take(*rollback_amount as usize);
@@ -154,6 +154,18 @@ mod tests {
             (
                 "CREATE TABLE users3 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
                 "DROP TABLE users3;",
+            ),
+            (
+                "CREATE TABLE users4 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+                "DROP TABLE users4;",
+            ),
+            (
+                "CREATE TABLE users5 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+                "DROP TABLE users5;",
+            ),
+            (
+                "CREATE TABLE users6 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+                "DROP TABLE users6;",
             ),
         ];
 
@@ -207,13 +219,38 @@ mod tests {
             env::set_var("DATABASE", url.0.as_str());
             env::set_var("DATABASE_URL", url.1);
 
+            let client = database_drivers::new(url.0, url.1).await.unwrap();
+
             let u = up().await;
-            println!("{:?}", u);
             assert_eq!(u.is_ok(), true);
 
+            let current_migrations = client
+                .get_or_create_schema_migrations()
+                .await
+                .unwrap()
+                .len();
+
+            assert_eq!(current_migrations, 6);
+
             let d = down(&1).await;
-            println!("{:?}", d);
             assert_eq!(d.is_ok(), true);
+
+            let current_migrations = client
+                .get_or_create_schema_migrations()
+                .await
+                .unwrap()
+                .len();
+            assert_eq!(current_migrations, 5);
+
+            let d = down(&3).await;
+            assert_eq!(d.is_ok(), true);
+
+            let current_migrations = client
+                .get_or_create_schema_migrations()
+                .await
+                .unwrap()
+                .len();
+            assert_eq!(current_migrations, 2);
         }
     }
 }

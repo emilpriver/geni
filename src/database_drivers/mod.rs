@@ -4,8 +4,9 @@ use std::future::Future;
 use std::pin::Pin;
 
 pub mod libsql;
+pub mod postgres;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SchemaMigration {
     pub id: String,
 }
@@ -19,7 +20,7 @@ pub trait DatabaseDriver {
 
     fn get_or_create_schema_migrations(
         &self,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<SchemaMigration>, anyhow::Error>> + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>>;
 
     fn insert_schema_migration<'a>(
         &'a self,
@@ -44,7 +45,11 @@ pub async fn new(
             let driver = libsql::LibSQLDriver::new(db_url, &token).await?;
             Ok(Box::new(driver))
         }
-        config::Database::Postgres => unimplemented!("Postgres driver not implemented"),
+        config::Database::Postgres => {
+            let token = config::database_token()?;
+            let driver = postgres::PostgresDriver::new(db_url).await?;
+            Ok(Box::new(driver))
+        }
         config::Database::MariaDB => unimplemented!("MariaDB driver not implemented"),
         config::Database::MySQL => unimplemented!("MySQL driver not implemented"),
         config::Database::SQLite => unimplemented!("SQLite driver not implemented"),

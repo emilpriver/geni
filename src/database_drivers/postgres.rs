@@ -1,33 +1,28 @@
 use crate::database_drivers::DatabaseDriver;
-use anyhow::{bail, Result};
-use libsql_client::{de, Client, Config};
+use anyhow::Result;
+use sqlx::postgres::PgRow;
+use sqlx::{Connection, PgConnection, Row};
 use std::future::Future;
 use std::pin::Pin;
 
-use super::SchemaMigration;
-
-pub struct LibSQLDriver {
-    db: Client,
+pub struct PostgresDriver {
+    db: PgConnection,
 }
 
-impl<'a> LibSQLDriver {
-    pub async fn new<'b>(db_url: &str, token: &str) -> Result<LibSQLDriver> {
-        let config = Config::new(db_url)?.with_auth_token(token);
-        let client = match libsql_client::Client::from_config(config).await {
-            Ok(c) => c,
-            Err(err) => bail!("{:?}", err),
-        };
-        Ok(LibSQLDriver { db: client })
+impl<'a> PostgresDriver {
+    pub async fn new<'b>(db_url: &str) -> Result<PostgresDriver> {
+        let client = PgConnection::connect(db_url).await?;
+        Ok(PostgresDriver { db: client })
     }
 }
 
-impl DatabaseDriver for LibSQLDriver {
+impl DatabaseDriver for PostgresDriver {
     fn execute<'a>(
         &'a self,
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute(query).await?;
+            sqlx::query(query).execute(&mut self.db).await?;
             Ok(())
         };
 
@@ -39,15 +34,14 @@ impl DatabaseDriver for LibSQLDriver {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
             let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY);";
-            self.db.execute(query).await?;
+            sqlx::query(query).execute(&mut self.db).await?;
             let query = "SELECT id FROM schema_migrations ORDER BY id DESC;";
-            let result = self.db.execute(query).await?;
+            let result: Vec<String> = sqlx::query(query)
+                .map(|row: PgRow| row.get("id"))
+                .fetch_all(&mut self.db)
+                .await?;
 
-            let rows = result.rows.iter().map(de::from_row);
-
-            let res = rows.collect::<Result<Vec<SchemaMigration>>>();
-
-            res.map(|v| v.into_iter().map(|s| s.id).collect())
+            Ok(result)
         };
 
         Box::pin(fut)
@@ -58,8 +52,9 @@ impl DatabaseDriver for LibSQLDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db
-                .execute(format!("INSERT INTO schema_migrations (id) VALUES ('{}');", id).as_str())
+            sqlx::query("INSERT INTO schema_migrations (id) VALUES ('?');")
+                .bind(id)
+                .execute(&mut self.db)
                 .await?;
             Ok(())
         };
@@ -72,9 +67,11 @@ impl DatabaseDriver for LibSQLDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db
-                .execute(format!("DELETE FROM schema_migrations WHERE id = '{}';", id).as_str())
+            sqlx::query("delete from schema_migrations where id = ?;")
+                .bind(id)
+                .execute(&mut self.db)
                 .await?;
+
             Ok(())
         };
 
