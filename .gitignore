@@ -3,3 +3,4 @@
 .go-tetris.log
 .envrc
 test.sqlite
+example.db

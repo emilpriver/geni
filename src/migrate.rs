@@ -300,8 +300,8 @@ mod tests {
 
         File::create(path)?;
 
-        let url = format!("sqlite://{}", path.to_str().unwrap());
+        let url = format!("file://{}", path.to_str().unwrap());
 
-        test_migrate(Database::MySQL, url.as_str()).await
+        test_migrate(Database::MySQL, &url).await
     }
 }

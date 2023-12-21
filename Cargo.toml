@@ -2,6 +2,7 @@
 name = "geni"
 version = "0.1.0"
 edition = "2021"
+resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,8 +18,8 @@ serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
 serial_test = "2.0.0"
 simplelog = "0.12.1"
-sqlx = { version = "0.7.3", features = ["runtime-tokio", "chrono", "postgres", "mysql", "sqlite", "time"] }
 tokio = { version = "1.35.0", features = ["full"] }
+sqlx = { version = "0.7.3",  features = ["runtime-tokio", "chrono", "postgres", "mysql", "time"] }
 
 [dev-dependencies]
 mockall = "0.12.0"

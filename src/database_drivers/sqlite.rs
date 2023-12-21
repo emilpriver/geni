@@ -1,17 +1,19 @@
 use crate::database_drivers::DatabaseDriver;
 use anyhow::Result;
-use sqlx::sqlite::SqliteRow;
-use sqlx::{Connection, Row, SqliteConnection};
+use libsql_client::{de, local::Client};
 use std::future::Future;
 use std::pin::Pin;
 
+use super::SchemaMigration;
+
 pub struct SqliteDriver {
-    db: SqliteConnection,
+    db: Client,
 }
 
 impl<'a> SqliteDriver {
     pub async fn new<'b>(db_url: &str) -> Result<SqliteDriver> {
-        let client = SqliteConnection::connect(db_url).await?;
+        let client = Client::new(db_url).unwrap();
+
         Ok(SqliteDriver { db: client })
     }
 }
@@ -22,7 +24,7 @@ impl DatabaseDriver for SqliteDriver {
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query(query).execute(&mut self.db).await?;
+            self.db.execute(query)?;
             Ok(())
         };
 
@@ -34,15 +36,16 @@ impl DatabaseDriver for SqliteDriver {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
             let query =
-                "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY)";
-            sqlx::query(query).execute(&mut self.db).await?;
-            let query = "SELECT id FROM schema_migrations ORDER BY id DESC";
-            let result: Vec<String> = sqlx::query(query)
-                .map(|row: SqliteRow| row.get("id"))
-                .fetch_all(&mut self.db)
-                .await?;
+                "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY);";
+            self.db.execute(query)?;
+            let query = "SELECT id FROM schema_migrations ORDER BY id DESC;";
+            let result = self.db.execute(query)?;
 
-            Ok(result)
+            let rows = result.rows.iter().map(de::from_row);
+
+            let res = rows.collect::<Result<Vec<SchemaMigration>>>();
+
+            res.map(|v| v.into_iter().map(|s| s.id).collect())
         };
 
         Box::pin(fut)
@@ -53,10 +56,9 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("INSERT INTO schema_migrations (id) VALUES ($1)")
-                .bind(id)
-                .execute(&mut self.db)
-                .await?;
+            self.db.execute(
+                format!("INSERT INTO schema_migrations (id) VALUES ('{}');", id).as_str(),
+            )?;
             Ok(())
         };
 
@@ -68,11 +70,8 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("delete from schema_migrations where id = $1")
-                .bind(id)
-                .execute(&mut self.db)
-                .await?;
-
+            self.db
+                .execute(format!("DELETE FROM schema_migrations WHERE id = '{}';", id).as_str())?;
             Ok(())
         };
 
