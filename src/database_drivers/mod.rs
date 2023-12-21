@@ -4,6 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 pub mod libsql;
+pub mod mysql;
 pub mod postgres;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -49,8 +50,11 @@ pub async fn new(
             let driver = postgres::PostgresDriver::new(db_url).await?;
             Ok(Box::new(driver))
         }
+        config::Database::MySQL => {
+            let driver = mysql::MySQLDriver::new(db_url).await?;
+            Ok(Box::new(driver))
+        }
         config::Database::MariaDB => unimplemented!("MariaDB driver not implemented"),
-        config::Database::MySQL => unimplemented!("MySQL driver not implemented"),
         config::Database::SQLite => unimplemented!("SQLite driver not implemented"),
     }
 }

@@ -139,8 +139,10 @@ mod tests {
     use anyhow::Ok;
     use chrono::Utc;
     use std::io::Write;
+    use std::time::Duration;
     use std::{env, fs::File, vec};
     use tokio::test;
+    use tokio::time::sleep;
 
     fn generate_test_migrations(migration_path: String) -> Result<()> {
         let file_endings = vec!["up", "down"];
@@ -204,6 +206,7 @@ mod tests {
     }
 
     async fn test_migrate(database: Database, url: &str) -> Result<()> {
+        sleep(Duration::new(10, 0)).await; // we need to sleep to wait for the database server to start
         let tmp_dir =
             tempdir::TempDir::new(format!("test_migrate_{}", database.as_str()).as_str()).unwrap();
         let migration_folder = tmp_dir.path();
@@ -266,5 +269,12 @@ mod tests {
     async fn test_migrate_postgres() -> Result<()> {
         let url = "psql://postgres:mysecretpassword@localhost:6437/development?sslmode=disable";
         test_migrate(Database::Postgres, url).await
+    }
+
+    #[test]
+    #[serial]
+    async fn test_migrate_mysql() -> Result<()> {
+        let url = "mysql://root:password@localhost:3306/development";
+        test_migrate(Database::MySQL, url).await
     }
 }

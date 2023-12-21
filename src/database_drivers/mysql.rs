@@ -1,22 +1,22 @@
 use crate::database_drivers::DatabaseDriver;
 use anyhow::Result;
-use sqlx::postgres::PgRow;
-use sqlx::{Connection, PgConnection, Row};
+use sqlx::mysql::MySqlRow;
+use sqlx::{Connection, MySqlConnection, Row};
 use std::future::Future;
 use std::pin::Pin;
 
-pub struct PostgresDriver {
-    db: PgConnection,
+pub struct MySQLDriver {
+    db: MySqlConnection,
 }
 
-impl<'a> PostgresDriver {
-    pub async fn new<'b>(db_url: &str) -> Result<PostgresDriver> {
-        let client = PgConnection::connect(db_url).await?;
-        Ok(PostgresDriver { db: client })
+impl<'a> MySQLDriver {
+    pub async fn new<'b>(db_url: &str) -> Result<MySQLDriver> {
+        let client = MySqlConnection::connect(db_url).await?;
+        Ok(MySQLDriver { db: client })
     }
 }
 
-impl DatabaseDriver for PostgresDriver {
+impl DatabaseDriver for MySQLDriver {
     fn execute<'a>(
         &'a mut self,
         query: &'a str,
@@ -38,7 +38,7 @@ impl DatabaseDriver for PostgresDriver {
             sqlx::query(query).execute(&mut self.db).await?;
             let query = "SELECT id FROM schema_migrations ORDER BY id DESC";
             let result: Vec<String> = sqlx::query(query)
-                .map(|row: PgRow| row.get("id"))
+                .map(|row: MySqlRow| row.get("id"))
                 .fetch_all(&mut self.db)
                 .await?;
 
@@ -53,7 +53,7 @@ impl DatabaseDriver for PostgresDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("INSERT INTO schema_migrations (id) VALUES ($1)")
+            sqlx::query("INSERT INTO schema_migrations (id) VALUES (?)")
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;
@@ -68,7 +68,7 @@ impl DatabaseDriver for PostgresDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("delete from schema_migrations where id = $1")
+            sqlx::query("delete from schema_migrations where id = ?")
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;

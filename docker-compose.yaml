@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   postgres:
-    image: postgres:12
+    image: postgres:latest
     command: ["postgres", "-c", "fsync=off", "-c", "max_connections=5000", "-c", "shared_buffers=250MB"]
     environment:
       - POSTGRES_DB=development
@@ -13,3 +13,12 @@ services:
     image: ghcr.io/tursodatabase/libsql-server:latest
     ports:
       - "6000:8080"
+  mysql:
+    image: mysql:latest
+    environment:
+      - MYSQL_DATABASE=development
+      - MYSQL_PASSWORD=password
+      - MYSQL_USER=user
+      - MYSQL_ROOT_PASSWORD=password
+    ports:
+      - '3306:3306'
