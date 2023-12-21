@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build and test:
+  build-and-test:
     strategy:
       matrix:
         version: [10, 12, 14]
