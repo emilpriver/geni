@@ -302,6 +302,6 @@ mod tests {
 
         let url = format!("file://{}", path.to_str().unwrap());
 
-        test_migrate(Database::MySQL, &url).await
+        test_migrate(Database::SQLite, &url).await
     }
 }
