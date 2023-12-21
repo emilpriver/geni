@@ -4,6 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 pub mod libsql;
+pub mod maria;
 pub mod mysql;
 pub mod postgres;
 pub mod sqlite;
@@ -43,8 +44,8 @@ pub async fn new(
     // the database_url is starting with "libsql" if the libsql driver is used
     match driver {
         config::Database::LibSQL => {
-            let token = config::database_token()?;
-            let driver = libsql::LibSQLDriver::new(db_url, &token).await?;
+            let token = config::database_token();
+            let driver = libsql::LibSQLDriver::new(db_url, token).await?;
             Ok(Box::new(driver))
         }
         config::Database::Postgres => {
@@ -59,6 +60,9 @@ pub async fn new(
             let driver = sqlite::SqliteDriver::new(db_url).await?;
             Ok(Box::new(driver))
         }
-        config::Database::MariaDB => unimplemented!("MariaDB driver not implemented"),
+        config::Database::MariaDB => {
+            let driver = maria::MariaDBDriver::new(db_url).await?;
+            Ok(Box::new(driver))
+        }
     }
 }

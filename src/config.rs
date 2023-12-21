@@ -17,12 +17,12 @@ pub fn database_url() -> Result<String> {
     bail!("missing DATABASE_URL env variable")
 }
 
-pub fn database_token() -> Result<String> {
+pub fn database_token() -> Option<String> {
     if let Ok(v) = env::var("DATABASE_TOKEN") {
-        return Ok(v);
+        return Some(v);
     }
 
-    bail!("missing DATABASE_TOKEN env variable")
+    None
 }
 
 pub enum Database {

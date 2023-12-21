@@ -282,6 +282,14 @@ mod tests {
 
     #[test]
     #[serial]
+    async fn test_migrate_maria() -> Result<()> {
+        sleep(Duration::new(10, 0)).await; // we need to sleep to wait for the database server to start
+        let url = "mysql://user:password@localhost:3307/development";
+        test_migrate(Database::MariaDB, url).await
+    }
+
+    #[test]
+    #[serial]
     async fn test_migrate_sqlite() -> Result<()> {
         let tmp_dir = tempdir::TempDir::new("temp_migrate_sqlite_db").unwrap();
         let migration_folder = tmp_dir.path();

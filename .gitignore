@@ -2,3 +2,4 @@
 /migrations
 .go-tetris.log
 .envrc
+test.sqlite

@@ -11,8 +11,12 @@ pub struct LibSQLDriver {
 }
 
 impl<'a> LibSQLDriver {
-    pub async fn new<'b>(db_url: &str, token: &str) -> Result<LibSQLDriver> {
-        let config = Config::new(db_url)?.with_auth_token(token);
+    pub async fn new<'b>(db_url: &str, token: Option<String>) -> Result<LibSQLDriver> {
+        let mut config = Config::new(db_url)?;
+        if let Some(token) = token {
+            config = config.with_auth_token(token);
+        }
+
         let client = match libsql_client::Client::from_config(config).await {
             Ok(c) => c,
             Err(err) => bail!("{:?}", err),
