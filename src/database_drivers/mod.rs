@@ -6,6 +6,7 @@ use std::pin::Pin;
 pub mod libsql;
 pub mod mysql;
 pub mod postgres;
+pub mod sqlite;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SchemaMigration {
@@ -54,7 +55,10 @@ pub async fn new(
             let driver = mysql::MySQLDriver::new(db_url).await?;
             Ok(Box::new(driver))
         }
+        config::Database::SQLite => {
+            let driver = sqlite::SqliteDriver::new(db_url).await?;
+            Ok(Box::new(driver))
+        }
         config::Database::MariaDB => unimplemented!("MariaDB driver not implemented"),
-        config::Database::SQLite => unimplemented!("SQLite driver not implemented"),
     }
 }

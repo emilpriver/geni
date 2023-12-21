@@ -206,7 +206,6 @@ mod tests {
     }
 
     async fn test_migrate(database: Database, url: &str) -> Result<()> {
-        sleep(Duration::new(10, 0)).await; // we need to sleep to wait for the database server to start
         let tmp_dir =
             tempdir::TempDir::new(format!("test_migrate_{}", database.as_str()).as_str()).unwrap();
         let migration_folder = tmp_dir.path();
@@ -260,6 +259,7 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_libsql() -> Result<()> {
+        sleep(Duration::new(2, 0)).await; // we need to sleep to wait for the database server to start
         let url = "http://localhost:6000";
         test_migrate(Database::LibSQL, url).await
     }
@@ -267,6 +267,7 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_postgres() -> Result<()> {
+        sleep(Duration::new(2, 0)).await; // we need to sleep to wait for the database server to start
         let url = "psql://postgres:mysecretpassword@localhost:6437/development?sslmode=disable";
         test_migrate(Database::Postgres, url).await
     }
@@ -274,7 +275,25 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_mysql() -> Result<()> {
+        sleep(Duration::new(10, 0)).await; // we need to sleep to wait for the database server to start
         let url = "mysql://root:password@localhost:3306/development";
         test_migrate(Database::MySQL, url).await
+    }
+
+    #[test]
+    #[serial]
+    async fn test_migrate_sqlite() -> Result<()> {
+        let tmp_dir = tempdir::TempDir::new("temp_migrate_sqlite_db").unwrap();
+        let migration_folder = tmp_dir.path();
+        let migration_folder_string = migration_folder.to_str().unwrap();
+        let filename = format!("{migration_folder_string}/test.sqlite");
+        let filename_str = filename.as_str();
+        let path = std::path::Path::new(filename_str);
+
+        File::create(path)?;
+
+        let url = format!("sqlite://{}", path.to_str().unwrap());
+
+        test_migrate(Database::MySQL, url.as_str()).await
     }
 }

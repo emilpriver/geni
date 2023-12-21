@@ -41,6 +41,7 @@ impl Database {
             Database::MariaDB => "mariadb",
             Database::MySQL => "mysql",
             Database::SQLite => "sqlite",
+            _ => panic!("Unknown database driver"),
         }
     }
 }
