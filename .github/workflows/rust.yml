@@ -10,9 +10,18 @@ env:
 
 jobs:
   build and test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [10, 12, 14]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: ['1.73.0']
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
+    - name: Set up Rust
+      uses: actions/setup-rust@v1
+      with:
+        rust-version: ${{ matrix.rust }}
     - name: Databases
       run: docker compose up -d
     - name: Build
