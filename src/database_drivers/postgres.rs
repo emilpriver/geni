@@ -18,7 +18,7 @@ impl<'a> PostgresDriver {
 
 impl DatabaseDriver for PostgresDriver {
     fn execute<'a>(
-        &'a self,
+        &'a mut self,
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
@@ -30,12 +30,12 @@ impl DatabaseDriver for PostgresDriver {
     }
 
     fn get_or_create_schema_migrations(
-        &self,
+        &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY);";
+            let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY)";
             sqlx::query(query).execute(&mut self.db).await?;
-            let query = "SELECT id FROM schema_migrations ORDER BY id DESC;";
+            let query = "SELECT id FROM schema_migrations ORDER BY id DESC";
             let result: Vec<String> = sqlx::query(query)
                 .map(|row: PgRow| row.get("id"))
                 .fetch_all(&mut self.db)
@@ -48,11 +48,11 @@ impl DatabaseDriver for PostgresDriver {
     }
 
     fn insert_schema_migration<'a>(
-        &'a self,
+        &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("INSERT INTO schema_migrations (id) VALUES ('?');")
+            sqlx::query("INSERT INTO schema_migrations (id) VALUES ($1)")
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;
@@ -63,11 +63,11 @@ impl DatabaseDriver for PostgresDriver {
     }
 
     fn remove_schema_migration<'a>(
-        &'a self,
+        &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("delete from schema_migrations where id = ?;")
+            sqlx::query("delete from schema_migrations where id = $1")
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;

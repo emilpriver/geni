@@ -23,7 +23,7 @@ impl<'a> LibSQLDriver {
 
 impl DatabaseDriver for LibSQLDriver {
     fn execute<'a>(
-        &'a self,
+        &'a mut self,
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
@@ -35,7 +35,7 @@ impl DatabaseDriver for LibSQLDriver {
     }
 
     fn get_or_create_schema_migrations(
-        &self,
+        &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
             let query = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY);";
@@ -54,7 +54,7 @@ impl DatabaseDriver for LibSQLDriver {
     }
 
     fn insert_schema_migration<'a>(
-        &'a self,
+        &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
@@ -68,7 +68,7 @@ impl DatabaseDriver for LibSQLDriver {
     }
 
     fn remove_schema_migration<'a>(
-        &'a self,
+        &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {

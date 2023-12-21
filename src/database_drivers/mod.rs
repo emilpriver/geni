@@ -14,21 +14,21 @@ pub struct SchemaMigration {
 // DatabaseDriver is a trait that all database drivers must implement
 pub trait DatabaseDriver {
     fn execute<'a>(
-        &'a self,
+        &'a mut self,
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 
     fn get_or_create_schema_migrations(
-        &self,
+        &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>>;
 
     fn insert_schema_migration<'a>(
-        &'a self,
+        &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 
     fn remove_schema_migration<'a>(
-        &'a self,
+        &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 }
@@ -46,7 +46,6 @@ pub async fn new(
             Ok(Box::new(driver))
         }
         config::Database::Postgres => {
-            let token = config::database_token()?;
             let driver = postgres::PostgresDriver::new(db_url).await?;
             Ok(Box::new(driver))
         }

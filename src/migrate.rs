@@ -55,7 +55,7 @@ pub async fn up() -> Result<()> {
 
     let database_url = database_url()?;
     let driver = database_driver()?;
-    let database = database_drivers::new(driver, &database_url).await?;
+    let mut database = database_drivers::new(driver, &database_url).await?;
 
     let migrations: Vec<String> = database
         .get_or_create_schema_migrations()
@@ -98,7 +98,7 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
 
     let database_url = database_url()?;
     let driver = database_driver()?;
-    let database = database_drivers::new(driver, &database_url).await?;
+    let mut database = database_drivers::new(driver, &database_url).await?;
 
     let migrations = database
         .get_or_create_schema_migrations()
@@ -133,8 +133,10 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use crate::config::Database;
+    use serial_test::serial;
 
     use super::*;
+    use anyhow::Ok;
     use chrono::Utc;
     use std::io::Write;
     use std::{env, fs::File, vec};
@@ -201,9 +203,9 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    async fn test_migrate() {
-        let tmp_dir = tempdir::TempDir::new("test_migrate").unwrap();
+    async fn test_migrate(database: Database, url: &str) -> Result<()> {
+        let tmp_dir =
+            tempdir::TempDir::new(format!("test_migrate_{}", database.as_str()).as_str()).unwrap();
         let migration_folder = tmp_dir.path();
         let migration_folder_string = migration_folder.to_str().unwrap();
 
@@ -211,46 +213,58 @@ mod tests {
 
         generate_test_migrations(migration_folder_string.to_string()).unwrap();
 
-        let db_urls = vec![(Database::LibSQL, "http://localhost:6000")];
-
         env::set_var("DATABASE_TOKEN", "not needed");
 
-        for url in db_urls {
-            env::set_var("DATABASE", url.0.as_str());
-            env::set_var("DATABASE_URL", url.1);
+        env::set_var("DATABASE", database.as_str());
+        env::set_var("DATABASE_URL", url);
 
-            let client = database_drivers::new(url.0, url.1).await.unwrap();
+        let mut client = database_drivers::new(database, url).await.unwrap();
 
-            let u = up().await;
-            assert_eq!(u.is_ok(), true);
+        let u = up().await;
+        assert_eq!(u.is_ok(), true);
 
-            let current_migrations = client
-                .get_or_create_schema_migrations()
-                .await
-                .unwrap()
-                .len();
+        let current_migrations = client
+            .get_or_create_schema_migrations()
+            .await
+            .unwrap()
+            .len();
 
-            assert_eq!(current_migrations, 6);
+        assert_eq!(current_migrations, 6);
 
-            let d = down(&1).await;
-            assert_eq!(d.is_ok(), true);
+        let d = down(&1).await;
+        assert_eq!(d.is_ok(), true);
 
-            let current_migrations = client
-                .get_or_create_schema_migrations()
-                .await
-                .unwrap()
-                .len();
-            assert_eq!(current_migrations, 5);
+        let current_migrations = client
+            .get_or_create_schema_migrations()
+            .await
+            .unwrap()
+            .len();
+        assert_eq!(current_migrations, 5);
 
-            let d = down(&3).await;
-            assert_eq!(d.is_ok(), true);
+        let d = down(&3).await;
+        assert_eq!(d.is_ok(), true);
 
-            let current_migrations = client
-                .get_or_create_schema_migrations()
-                .await
-                .unwrap()
-                .len();
-            assert_eq!(current_migrations, 2);
-        }
+        let current_migrations = client
+            .get_or_create_schema_migrations()
+            .await
+            .unwrap()
+            .len();
+        assert_eq!(current_migrations, 2);
+
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    async fn test_migrate_libsql() -> Result<()> {
+        let url = "http://localhost:6000";
+        test_migrate(Database::LibSQL, url).await
+    }
+
+    #[test]
+    #[serial]
+    async fn test_migrate_postgres() -> Result<()> {
+        let url = "psql://postgres:mysecretpassword@localhost:6437/development?sslmode=disable";
+        test_migrate(Database::Postgres, url).await
     }
 }
