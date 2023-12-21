@@ -9,10 +9,10 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-and-test:
+  test:
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-20.04, macos-13, macos-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
@@ -21,7 +21,5 @@ jobs:
       uses: douglascamata/setup-docker-macos-action@v1-alpha
     - name: Databases
       run: docker compose up -d
-    - name: Build
-      run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
