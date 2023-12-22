@@ -21,6 +21,7 @@ impl<'a> LibSQLDriver {
             Ok(c) => c,
             Err(err) => bail!("{:?}", err),
         };
+
         Ok(LibSQLDriver { db: client })
     }
 }

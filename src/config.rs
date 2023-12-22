@@ -25,6 +25,16 @@ pub fn database_token() -> Option<String> {
     None
 }
 
+pub fn wait_timeout() -> usize {
+    if let Ok(v) = env::var("DATABASE_WAIT_TIMEOUT") {
+        if let Ok(v) = v.parse::<usize>() {
+            return v;
+        }
+    }
+
+    0
+}
+
 pub enum Database {
     LibSQL,
     Postgres,
