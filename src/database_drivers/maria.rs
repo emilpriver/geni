@@ -1,3 +1,4 @@
+use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::Result;
 use sqlx::mysql::MySqlRow;
@@ -11,7 +12,24 @@ pub struct MariaDBDriver {
 
 impl<'a> MariaDBDriver {
     pub async fn new<'b>(db_url: &str) -> Result<MariaDBDriver> {
-        let client = MySqlConnection::connect(db_url).await?;
+        let mut client = MySqlConnection::connect(db_url).await?;
+
+        let wait_timeout = config::wait_timeout();
+
+        let mut count = 0;
+        loop {
+            if count > wait_timeout {
+                break;
+            }
+
+            if client.ping().await.is_ok() {
+                break;
+            }
+
+            count += 1;
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        }
+
         Ok(MariaDBDriver { db: client })
     }
 }
