@@ -95,4 +95,16 @@ impl DatabaseDriver for MySQLDriver {
 
         Box::pin(fut)
     }
+
+    fn dump_database(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<String, anyhow::Error>> + '_>> {
+        let fut = async move {
+            sqlx::query("").execute(&mut self.db).await?;
+
+            Ok("".to_string())
+        };
+
+        Box::pin(fut)
+    }
 }

@@ -86,4 +86,15 @@ impl DatabaseDriver for LibSQLDriver {
 
         Box::pin(fut)
     }
+
+    fn dump_database<'a>(
+        &'a mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<String, anyhow::Error>> + '_>> {
+        let fut = async move {
+            self.db.execute("").await?;
+            Ok("".to_string())
+        };
+
+        Box::pin(fut)
+    }
 }
