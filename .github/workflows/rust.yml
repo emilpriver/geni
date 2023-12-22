@@ -1,5 +1,7 @@
 name: Rust
 
+// ref: https://github.com/mpizenberg/elm-test-rs/blob/master/.github/workflows/ci.yml#L9
+
 on:
   push:
     branches: [ "main" ]
@@ -23,3 +25,32 @@ jobs:
       run: docker compose up -d
     - name: Run tests
       run: cargo test --verbose
+  build-binary:
+    needs: test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        target: aarch64-unknown-linux-gnu, i686-pc-windows-gnu, i686-pc-windows-msvc, i686-unknown-linux-gnu, x86_64-apple-darwin, x86_64-pc-windows-gnu, x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu
+    - name: Build
+      run: |
+        cargo build --verbose --target aarch64-unknown-linux-gnu
+        cargo build --verbose --target i686-pc-windows-gnu
+        cargo build --verbose --target i686-pc-windows-msvc
+        cargo build --verbose --target i686-unknown-linux-gnu
+        cargo build --verbose --target x86_64-apple-darwin
+        cargo build --verbose --target x86_64-pc-windows-gnu
+        cargo build --verbose --target x86_64-pc-windows-msvc
+        cargo build --verbose --target x86_64-unknown-linux-gnu
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: my-artifact
+        path: target/*
