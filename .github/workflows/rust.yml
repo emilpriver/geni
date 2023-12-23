@@ -25,32 +25,42 @@ jobs:
       run: docker compose up -d
     - name: Run tests
       run: cargo test --verbose
-  build-binary:
-    needs: test
-    strategy:
+  deploy:
+    name: deploy
+    needs: [test]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    strategy: 
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        target: [ aarch64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, i686-unknown-linux-gnu, i686-unknown-linux-musl, mips-unknown-linux-gnu, mips64-unknown-linux-gnuabi64, mips64el-unknown-linux-gnuabi64, mipsel-unknown-linux-gnu, powerpc-unknown-linux-gnu, powerpc64-unknown-linux-gnu, powerpc64le-unknown-linux-gnu,           arm-unknown-linux-gnueabi          ,x86_64-unknown-linux-gnu           ,x86_64-unknown-linux-musl]
     steps:
-    - uses: actions/checkout@v2
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-        target: aarch64-unknown-linux-gnu, i686-pc-windows-gnu, i686-pc-windows-msvc, i686-unknown-linux-gnu, x86_64-apple-darwin, x86_64-pc-windows-gnu, x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu
-    - name: Build
-      run: |
-        cargo build --verbose --target aarch64-unknown-linux-gnu
-        cargo build --verbose --target i686-pc-windows-gnu
-        cargo build --verbose --target i686-pc-windows-msvc
-        cargo build --verbose --target i686-unknown-linux-gnu
-        cargo build --verbose --target x86_64-apple-darwin
-        cargo build --verbose --target x86_64-pc-windows-gnu
-        cargo build --verbose --target x86_64-pc-windows-msvc
-        cargo build --verbose --target x86_64-unknown-linux-gnu
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: my-artifact
-        path: target/*
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: ${{ matrix.target }}
+
+      - name: Build target
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target ${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        run: |
+          cd target/${{ matrix.target }}/release          
+          tar czvf ../../../geni-${{ matrix.target }}.tar.gz geni
+          cd -
+      - name: Publish
+        uses: softprops/action-gh-release@v1
+        with:
+            files: 'geni*'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
