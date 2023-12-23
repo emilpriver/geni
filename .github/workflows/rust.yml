@@ -1,7 +1,5 @@
 name: Rust
 
-// ref: https://github.com/mpizenberg/elm-test-rs/blob/master/.github/workflows/ci.yml#L9
-
 on:
   push:
     branches: [ "main" ]
