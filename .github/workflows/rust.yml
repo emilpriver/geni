@@ -26,7 +26,7 @@ jobs:
       run: docker compose up -d
     - name: Run tests
       run: cargo test --verbose
-  deploy:
+  build:
     name: deploy
     needs: [test]
     if: startsWith(github.ref, 'refs/tags/')
@@ -58,10 +58,17 @@ jobs:
           cd target/${{ matrix.target }}/release          
           tar czvf ../../../geni-${{ matrix.target }}.tar.gz geni
           cd -
+  release:
+    name: release
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest   
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
       - name: Publish
         uses: softprops/action-gh-release@v1
         with:
             files: 'geni*'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
