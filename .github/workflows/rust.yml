@@ -27,7 +27,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
   build:
-    name: deploy
+    name: build
     needs: [test]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -49,16 +49,16 @@ jobs:
       - name: Build target
         uses: actions-rs/cargo@v1
         with:
-          use-cross: true
+          use-cross: false
           command: build
           args: --release --target ${{ matrix.target }}
-
       - name: Package
         shell: bash
         run: |
           cd target/${{ matrix.target }}/release          
           tar czvf ../../../geni-${{ matrix.target }}.tar.gz geni
           cd -
+        # FIXME: upload to artifacts
   release:
     name: release
     needs: [build]
@@ -67,9 +67,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v1
+        # FIXME: fetch artifacts
       - name: Publish
         uses: softprops/action-gh-release@v1
         with:
             files: 'geni*'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # FIXME: build docker image and deploy to docker hub
