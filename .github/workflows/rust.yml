@@ -39,9 +39,7 @@ jobs:
               sudo apt-get install -qq gcc-i686-linux-gnu
               sudo apt-get install -qq libssl-dev
               sudo apt-get install -qq gcc-multilib
-            env:
-              CC: i686-linux-gnu-gcc
-              CXX: i686-linux-gnu-g++
+            env: {}
           - os: linux
             image: ubuntu-latest
             arch: amd64
