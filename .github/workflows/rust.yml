@@ -99,6 +99,7 @@ jobs:
       - name: Package
         shell: bash
         run: |
+          ls -al target/release
           cp target/release/geni geni-${{matrix.os}}-${{matrix.arch}}
       - uses: actions/upload-artifact@v4
         with:
