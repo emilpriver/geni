@@ -73,7 +73,8 @@ jobs:
           - os: windows
             image: windows-latest
             arch: amd64
-            env: {}
+            env:
+              CC: cl.exe
     name: Build (${{ matrix.os }}/${{ matrix.arch }})
     runs-on: ${{ matrix.image }}
     env: ${{ matrix.env }}
