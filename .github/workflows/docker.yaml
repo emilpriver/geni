@@ -43,4 +43,4 @@ jobs:
         run: docker build -t ghcr.io/${{ github.repository }}/geni:${{  github.ref_name }} . 
       - name: Push
         if: startsWith(github.ref, 'refs/tags/')
-        run: docker push ghcr.io/${{ github.repository }}/geni:${{  github.ref_name }}
+        run: docker push ghcr.io/${{ github.repository }}:${{  github.ref_name }}
