@@ -85,9 +85,14 @@ jobs:
         run: ${{ matrix.setup }}
       - name: Install compiler
         if: ${{matrix.os}} == "windows"
+        id: install_cc
         uses: rlalik/setup-cpp-compiler@master
         with:
           compiler: latest
+      - name: Add CPP compiler to env
+        run: |
+          echo "CC=${{ steps.install_cc.outputs.cc }}" >> $GITHUB_ENV
+          echo "CCX=${{ steps.install_cc.outputs.ccx }}" >> $GITHUB_ENV
       - name: Build
         run: cargo build --release --verbose
       - name: Package
