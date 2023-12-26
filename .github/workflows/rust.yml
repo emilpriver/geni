@@ -74,8 +74,6 @@ jobs:
             image: windows-latest
             arch: amd64
             env: 
-              CC: cl.exe
-              CFLAGS: -x
               TARGET: x86_64-pc-windows-msvc
     name: Build (${{ matrix.os }}/${{ matrix.arch }})
     runs-on: ${{ matrix.image }}
@@ -85,12 +83,8 @@ jobs:
         uses: actions/checkout@v4  
       - name: Setup environment
         run: ${{ matrix.setup }}
-      - name: Install compiler
+      - uses: ilammy/msvc-dev-cmd@v1.12.1
         if: ${{matrix.os}} == "windows"
-        id: install_cc
-        uses: rlalik/setup-cpp-compiler@master
-        with:
-          compiler: latest
       - name: Build
         run: cargo build --release --verbose
       - name: Package
