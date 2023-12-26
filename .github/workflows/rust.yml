@@ -27,7 +27,6 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
   build-binary:
-    name: build binaries
     needs: [test]
     runs-on: ubuntu-latest
     strategy: 
