@@ -27,7 +27,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
   build-binary:
-    name: build
+    name: build binaries
     needs: [test]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -36,14 +36,14 @@ jobs:
         target: [aarch64-unknown-linux-gnu,i686-pc-windows-gnu, i686-pc-windows-msvc, i686-unknown-linux-gnu, x86_64-apple-darwin,x86_64-apple-darwin,x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
-      - name: Install rust
+        uses: actions/checkout@v1  
+      - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
-          profile: minimal
-          override: true
-          target: ${{ matrix.target }}
+            toolchain: stable
+            override: true
+            target: ${{matrix.target}}
+            default: true
       - name: Install deps
         run: sudo apt install libssl-dev
       - name: Build target
@@ -61,7 +61,7 @@ jobs:
           name: ${{matrix.target}}
           path: geni-${{matrix.target}}
   release-binary:
-    name: release
+    name: release binaries
     needs: [build-binary]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -75,7 +75,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release-docker:
-    name: release
+    name: build and release docker
     needs: [release-binary]
     runs-on: ubuntu-latest
     steps:
