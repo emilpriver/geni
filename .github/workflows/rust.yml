@@ -96,11 +96,16 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1.12.1
       - name: Build
         run: cargo build --release --verbose
-      - name: Package
+      - name: Rename package 
+        if: ${{matrix.os != 'windows'}}
         shell: bash
         run: |
-          ls -al target/release
           cp target/release/geni geni-${{matrix.os}}-${{matrix.arch}}
+      - name: Rename package 
+        if: ${{matrix.os == 'windows'}}
+        shell: bash
+        run: |
+          cp target/release/geni.exe geni-${{matrix.os}}-${{matrix.arch}}.exe
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}
