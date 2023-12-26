@@ -83,6 +83,11 @@ jobs:
         uses: actions/checkout@v4  
       - name: Setup environment
         run: ${{ matrix.setup }}
+      - name: Install compiler
+        if: ${{matrix.os}} == "windows"
+        uses: rlalik/setup-cpp-compiler@master
+        with:
+          compiler: latest
       - name: Build
         run: cargo build --release --verbose
       - name: Package
