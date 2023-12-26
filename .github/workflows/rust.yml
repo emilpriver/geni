@@ -34,7 +34,7 @@ jobs:
           - os: linux
             image: ubuntu-latest
             arch: 386
-            setup: sudo apt-get update && sudo apt-get install -qq gcc-i686-linux-gnu && sudo apt-get install -qq libssl-dev && sudo apt-get install -qq gcc-multilib
+            setup: sudo apt-get update && sudo apt-get install -qq gcc-i686-linux-gnu && sudo apt-get install -qq i686-linux-gnu-gcc && sudo apt-get install -qq libssl-dev && sudo apt-get install -qq gcc-multilib
             env:
               CC: i686-linux-gnu-gcc
               CXX: i686-linux-gnu-g++
