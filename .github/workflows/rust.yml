@@ -75,6 +75,7 @@ jobs:
             arch: amd64
             env:
               CC: gcc
+              CFLAGS: -x
     name: Build (${{ matrix.os }}/${{ matrix.arch }})
     runs-on: ${{ matrix.image }}
     env: ${{ matrix.env }}
