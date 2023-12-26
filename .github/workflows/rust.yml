@@ -49,6 +49,7 @@ jobs:
             env:
               CC: arm-linux-gnueabi-gcc
               CXX: arm-linux-gnueabi-g++
+              TARGET: aarch64-unknown-linux-gnu
               GOARM: 6
           - os: linux
             image: ubuntu-latest
@@ -58,6 +59,8 @@ jobs:
               CC: aarch64-linux-gnu-gcc
               CXX: aarch64-linux-gnu-g++
               CFLAGS: -march=armv8-a
+              HOST_CFLAGS: -march=armv8-a 
+              TARGET: aarch64-unknown-linux-gnu
           - os: macos
             image: macos-latest
             arch: amd64
