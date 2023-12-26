@@ -93,6 +93,9 @@ jobs:
           compiler: latest
       - uses: ilammy/msvc-dev-cmd@v1.12.1
         if: ${{matrix.os}} == "windows"
+      - name: Install sqlite3 for windows
+        run: .\vcpkg.exe install --triplet=x64-windows-static-md sqlite3
+        if: ${{matrix.os}} == "windows"
       - name: Build
         run: cargo build --release --verbose
       - name: Package
