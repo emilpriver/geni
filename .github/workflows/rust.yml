@@ -91,4 +91,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/my-image:latest
+          tags: ghcr.io/${{ github.repository }}/geni:latest
