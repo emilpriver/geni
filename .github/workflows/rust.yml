@@ -26,7 +26,7 @@ jobs:
       run: docker compose up -d
     - name: Run tests
       run: cargo test --verbose
-  build:
+  build-binary:
     name: build
     needs: [test]
     if: startsWith(github.ref, 'refs/tags/')
@@ -55,23 +55,40 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          cd target/${{ matrix.target }}/release          
-          tar czvf ../../../geni-${{ matrix.target }}.tar.gz geni
-          cd -
-        # FIXME: upload to artifacts
-  release:
+          cp target/release/geni geni-${{matrix.target}}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{matrix.target}}
+          path: geni-${{matrix.target}}
+  release-binary:
     name: release
     needs: [build]
     if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest   
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v1
-        # FIXME: fetch artifacts
       - name: Publish
         uses: softprops/action-gh-release@v1
         with:
             files: 'geni*'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    # FIXME: build docker image and deploy to docker hub
+  release-docker:
+    name: release
+    needs: [release-binary]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/my-image:latest
