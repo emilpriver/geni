@@ -73,7 +73,8 @@ jobs:
           - os: windows
             image: windows-latest
             arch: amd64
-            env: {}
+            env: 
+              - CC: gcc
     name: Build (${{ matrix.os }}/${{ matrix.arch }})
     runs-on: ${{ matrix.image }}
     env: ${{ matrix.env }}
@@ -88,11 +89,6 @@ jobs:
         uses: rlalik/setup-cpp-compiler@master
         with:
           compiler: latest
-      - name: Add CPP compiler to env
-        if: ${{matrix.os}} == "windows"
-        run: |
-          export CC=${{ steps.install_cc.outputs.cc }}
-          export CCX=${{ steps.install_cc.outputs.ccx }}
       - name: Build
         run: cargo build --release --verbose
       - name: Package
