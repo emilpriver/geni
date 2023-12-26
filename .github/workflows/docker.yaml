@@ -1,0 +1,46 @@
+
+name: Docker
+
+on:
+  pull_request:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install docker for macos
+      if: startsWith(matrix.os, 'macos-')
+      uses: douglascamata/setup-docker-macos-action@v1-alpha
+    - name: Databases
+      run: docker compose up -d
+    - name: Run tests
+      run: cargo test --verbose
+  build-and-releas:
+    name: build and release docker
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build 
+        run: docker build -t ghcr.io/${{ github.repository }}/geni:${{  github.ref_name }} . 
+      - name: Push
+        if: startsWith(github.ref, 'refs/tags/')
+        run: docker push ghcr.io/${{ github.repository }}/geni:${{  github.ref_name }}

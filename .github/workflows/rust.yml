@@ -18,7 +18,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install docker for macos
       if: startsWith(matrix.os, 'macos-')
       uses: douglascamata/setup-docker-macos-action@v1-alpha
@@ -74,7 +74,7 @@ jobs:
     env: ${{ matrix.env }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v1  
+        uses: actions/checkout@v4  
       - name: Install toolchains
         run: rustup update
       - name: Setup environment
@@ -96,21 +96,3 @@ jobs:
             files: 'geni*'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  release-docker:
-    name: build and release docker
-    needs: [build-binary]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository }}/geni:latest
