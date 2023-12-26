@@ -95,6 +95,8 @@ jobs:
         name: setup MSVC
         uses: ilammy/msvc-dev-cmd@v1.12.1
       - if: ${{matrix.os == 'windows'}}
+        uses: lukka/get-cmake@latest
+      - if: ${{matrix.os == 'windows'}}
         name: Setup anew (or from cache) vcpkg (and does not build any package)
         uses: lukka/run-vcpkg@v11
       - if: ${{matrix.os == 'windows'}}
