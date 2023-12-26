@@ -98,7 +98,7 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          cp target/release/geni geni-${{matrix.arch}}
+          cp target/release/geni geni-${{matrix.os}}-${{matrix.arch}}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}/${{ matrix.arch }}
