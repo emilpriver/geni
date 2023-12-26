@@ -73,8 +73,7 @@ jobs:
           - os: windows
             image: windows-latest
             arch: amd64
-            env:
-              CC: cl.exe
+            env: {}
     name: Build (${{ matrix.os }}/${{ matrix.arch }})
     runs-on: ${{ matrix.image }}
     env: ${{ matrix.env }}
@@ -92,8 +91,8 @@ jobs:
       - name: Add CPP compiler to env
         if: ${{matrix.os}} == "windows"
         run: |
-          echo "CC=${{ steps.install_cc.outputs.cc }}" >> $GITHUB_ENV
-          echo "CCX=${{ steps.install_cc.outputs.ccx }}" >> $GITHUB_ENV
+          export CC=${{ steps.install_cc.outputs.cc }}
+          export CCX=${{ steps.install_cc.outputs.ccx }}
       - name: Build
         run: cargo build --release --verbose
       - name: Package
