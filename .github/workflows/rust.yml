@@ -77,6 +77,10 @@ jobs:
         uses: actions/checkout@v1  
       - name: Install toolchains
         run: rustup update
+      - name: Install deps
+        if: ${{matrix.os}} == "linux"
+        run: |
+          sudo apt install libssl-dev
       - name: Build
         run: cargo build --release --verbose
       - name: Package
