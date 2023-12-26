@@ -106,11 +106,10 @@ jobs:
         shell: bash
         run: |
           cp target/release/geni.exe geni-${{matrix.os}}-${{matrix.arch}}.exe
-          ls -al
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}
-          path: geni-${{matrix.os}}-${{matrix.arch}}
+          path: geni-${{matrix.os}}-${{matrix.arch}}*
       - name: Publish to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
