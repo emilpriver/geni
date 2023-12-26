@@ -50,7 +50,8 @@ jobs:
               CC: arm-linux-gnueabi-gcc
               CXX: arm-linux-gnueabi-g++
               TARGET: aarch64-unknown-linux-gnu
-              GOARM: 6
+              CFLAGS: -march=armv8-a
+              HOST_CFLAGS: -march=armv8-a 
           - os: linux
             image: ubuntu-latest
             arch: arm64
