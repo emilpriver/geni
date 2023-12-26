@@ -90,6 +90,7 @@ jobs:
         with:
           compiler: latest
       - name: Add CPP compiler to env
+        if: ${{matrix.os}} == "windows"
         run: |
           echo "CC=${{ steps.install_cc.outputs.cc }}" >> $GITHUB_ENV
           echo "CCX=${{ steps.install_cc.outputs.ccx }}" >> $GITHUB_ENV
