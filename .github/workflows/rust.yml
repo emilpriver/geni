@@ -86,16 +86,19 @@ jobs:
       - name: Setup environment
         run: ${{ matrix.setup }}
       - name: Install compiler
-        if: ${{matrix.os}} == "windows"
+        if: contains(matrix.os, "windows")
         id: install_cc
         uses: rlalik/setup-cpp-compiler@master
         with:
           compiler: latest
-      - uses: ilammy/msvc-dev-cmd@v1.12.1
-        if: ${{matrix.os}} == "windows"
-      - name: Install sqlite3 for windows
-        if: ${{matrix.os}} == "windows"
+      - if: contains(matrix.os, "windows")
+        name: setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1.12.1
+
+      - if: contains(matrix.os, "windows")
+        name: Install sqlite3 for windows
         run: .\vcpkg.exe install --triplet=x64-windows-static-md sqlite3
+      
       - name: Build
         run: cargo build --release --verbose
       - name: Package
