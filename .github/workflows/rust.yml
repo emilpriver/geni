@@ -85,7 +85,7 @@ jobs:
       - name: Add clang path to $PATH env
         shell: bash
         if: runner.os == 'windows'
-        run: echo "PATH=$PATH:C:\msys64\mingw64\bin" >> $GITHUB_ENV
+        run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
       - name: Build
         run: cargo build --release --verbose
       - name: Package
