@@ -6,7 +6,7 @@ RUN cargo build --release
 
 RUN cp target/release/geni /usr/src/app/geni
 
-FROM rust:1.71.0
+FROM rust:1.74.1
 COPY --from=builder /usr/src/app/geni /usr/src/app/geni
 
 WORKDIR /usr/src/app
