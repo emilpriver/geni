@@ -38,15 +38,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Determine Tag or Branch
-        id: ref
-        run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "::set-output name=tag::${GITHUB_REF/refs\/tags\//}"
-          else
-            echo "::set-output name=branch::${GITHUB_REF/refs\/heads\//}"
-          fi
       - name: Build
+        if: startsWith(github.ref, 'refs/tags/') == false
+        run: docker build -t geni .
+      - name: Build
+        if: startsWith(github.ref, 'refs/tags/')
         run: docker build -t ghcr.io/${{ github.repository }}:${{ steps.ref.outputs.tag || steps.ref.outputs.branch }} .
       - name: Push Tagged Image
         if: startsWith(github.ref, 'refs/tags/')

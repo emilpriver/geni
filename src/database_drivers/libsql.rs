@@ -4,7 +4,7 @@ use libsql_client::{de, Client, Config};
 use std::future::Future;
 use std::pin::Pin;
 
-use super::{utils, SchemaMigration};
+use super::SchemaMigration;
 
 pub struct LibSQLDriver {
     db: Client,
@@ -22,11 +22,7 @@ impl<'a> LibSQLDriver {
             Err(err) => bail!("{:?}", err),
         };
 
-        let mut d = LibSQLDriver { db: client };
-
-        utils::wait_for_database(&mut d).await?;
-
-        Ok(d)
+        Ok(LibSQLDriver { db: client })
     }
 }
 
