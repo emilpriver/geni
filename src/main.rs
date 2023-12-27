@@ -5,6 +5,8 @@ use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 mod config;
 mod database_drivers;
 mod generate;
+mod integration_test;
+mod management;
 mod migrate;
 
 #[tokio::main]
@@ -25,14 +27,9 @@ async fn main() {
         .name("geni")
         .author("Emil Privér")
         .subcommands([
-            Command::new("new").about("Create new migration").arg(
-                Arg::new("name")
-                    .short('n')
-                    .long("name")
-                    .help("Name for your new migration")
-                    .action(ArgAction::Set)
-                    .num_args(1),
-            ),
+            Command::new("new")
+                .about("Create new migration")
+                .arg(Arg::new("name").required(true).index(1)),
             Command::new("up").about("Migrate to the latest version"),
             Command::new("down")
                 .about("Rollback to last migration")
@@ -44,6 +41,8 @@ async fn main() {
                         .action(ArgAction::Set)
                         .num_args(0..=1),
                 ),
+            Command::new("create").about("Create database"),
+            Command::new("drop").about("Drop database"),
         ])
         .get_matches();
 
@@ -57,6 +56,23 @@ async fn main() {
                 Ok(_) => info!("Success"),
             };
         }
+        Some(("create", ..)) => {
+            match management::create().await {
+                Err(err) => {
+                    error!("{:?}", err)
+                }
+                Ok(_) => info!("Success"),
+            };
+        }
+        Some(("drop", ..)) => {
+            match management::drop().await {
+                Err(err) => {
+                    error!("{:?}", err)
+                }
+                Ok(_) => info!("Success"),
+            };
+        }
+
         Some(("up", ..)) => {
             match migrate::up().await {
                 Err(err) => {

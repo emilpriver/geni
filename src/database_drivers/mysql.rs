@@ -1,6 +1,6 @@
 use crate::config;
-use crate::database_drivers::DatabaseDriver;
-use anyhow::Result;
+use crate::database_drivers::{utils, DatabaseDriver};
+use anyhow::{bail, Result};
 use sqlx::mysql::MySqlRow;
 use sqlx::{Connection, MySqlConnection, Row};
 use std::future::Future;
@@ -8,28 +8,47 @@ use std::pin::Pin;
 
 pub struct MySQLDriver {
     db: MySqlConnection,
+    url: String,
+    db_name: String,
 }
 
 impl<'a> MySQLDriver {
-    pub async fn new<'b>(db_url: &str) -> Result<MySQLDriver> {
-        let mut client = MySqlConnection::connect(db_url).await?;
+    pub async fn new<'b>(db_url: &str, database_name: &str) -> Result<MySQLDriver> {
+        let mut client = MySqlConnection::connect(db_url).await;
 
         let wait_timeout = config::wait_timeout();
-        let mut count = 0;
-        loop {
-            if count > wait_timeout {
-                break;
-            }
 
-            if client.ping().await.is_ok() {
-                break;
-            }
+        if client.is_err() {
+            let mut count = 0;
+            loop {
+                println!("Waiting for database to be ready");
+                if count > wait_timeout {
+                    bail!("Database is not ready");
+                }
 
-            count += 1;
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                match MySqlConnection::connect(db_url).await {
+                    Ok(c) => {
+                        client = Ok(c);
+                        break;
+                    }
+                    Err(_) => {
+                        count += 1;
+                        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                        continue;
+                    }
+                }
+            }
         }
 
-        Ok(MySQLDriver { db: client })
+        let mut m = MySQLDriver {
+            db: client.unwrap(),
+            url: db_url.to_string(),
+            db_name: database_name.to_string(),
+        };
+
+        utils::wait_for_database(&mut m).await?;
+
+        Ok(m)
     }
 }
 
@@ -90,6 +109,39 @@ impl DatabaseDriver for MySQLDriver {
                 .execute(&mut self.db)
                 .await?;
 
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn create_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            let query = format!("CREATE DATABASE IF NOT EXISTS {}", self.db_name);
+
+            let mut client = MySqlConnection::connect(self.url.as_str()).await?;
+            sqlx::query(query.as_str()).execute(&mut client).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn drop_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            let query = format!("DROP DATABASE IF EXISTS {}", self.db_name);
+
+            let mut client = MySqlConnection::connect(self.url.as_str()).await?;
+            sqlx::query(query.as_str()).execute(&mut client).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            sqlx::query("SELECT 1").execute(&mut self.db).await?;
             Ok(())
         };
 

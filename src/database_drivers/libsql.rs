@@ -86,4 +86,35 @@ impl DatabaseDriver for LibSQLDriver {
 
         Box::pin(fut)
     }
+
+    fn create_database(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            bail!("Geni does not support creating a database, it should be done via the respective interface")
+        };
+
+        Box::pin(fut)
+    }
+
+    fn drop_database(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            bail!("Geni does not support dropping a database, it should be done via the respective interface")
+        };
+
+        Box::pin(fut)
+    }
+
+    // SQlite don't have a HTTP connection so we don't need to check if it's ready
+    fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            self.db.execute("SELECT 1").await?;
+
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
 }

@@ -8,7 +8,7 @@ use crate::config::migration_folder;
 
 pub fn generate_new_migration(migration_name: &str) -> Result<()> {
     let timestamp = Utc::now().timestamp();
-    let name = migration_name.replace(" ", "_").to_lowercase();
+    let name = migration_name.replace(' ', "_").to_lowercase();
 
     let file_endings = vec!["up", "down"];
 
@@ -50,14 +50,14 @@ mod tests {
         let migration_folder = tmp_dir.path();
         let migration_folder_string = migration_folder.to_str().unwrap();
 
-        env::set_var("MIGRATION_DIR", migration_folder_string);
+        env::set_var("DATABASE_MIGRATIONS_FOLDER", migration_folder_string);
 
         let result = generate_new_migration(migration_name);
 
         assert!(result.is_ok());
 
         let timestamp = Utc::now().timestamp();
-        let name = migration_name.replace(" ", "_").to_lowercase();
+        let name = migration_name.replace(' ', "_").to_lowercase();
 
         let up_file = format!("{migration_folder_string}/{timestamp}_{name}.up.sql");
         let down_file = format!("{migration_folder_string}/{timestamp}_{name}.down.sql");

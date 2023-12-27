@@ -1,6 +1,7 @@
 use crate::database_drivers::DatabaseDriver;
 use anyhow::Result;
 use libsql_client::{de, local::Client};
+use std::fs::{self, File};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -8,13 +9,27 @@ use super::SchemaMigration;
 
 pub struct SqliteDriver {
     db: Client,
+    path: String,
 }
 
 impl<'a> SqliteDriver {
     pub async fn new<'b>(db_url: &str) -> Result<SqliteDriver> {
-        let client = Client::new(db_url).unwrap();
+        let path = std::path::Path::new(db_url.split_once("://").unwrap().1);
 
-        Ok(SqliteDriver { db: client })
+        if let Err(_) = File::open(path.to_str().unwrap()) {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            File::create(path)?;
+        }
+
+        let client = Client::new(path.to_str().unwrap()).unwrap();
+
+        Ok(SqliteDriver {
+            db: client,
+            path: path.to_str().unwrap().to_string(),
+        })
     }
 }
 
@@ -74,6 +89,33 @@ impl DatabaseDriver for SqliteDriver {
                 .execute(format!("DELETE FROM schema_migrations WHERE id = '{}';", id).as_str())?;
             Ok(())
         };
+
+        Box::pin(fut)
+    }
+
+    fn create_database(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move { Ok(()) };
+
+        Box::pin(fut)
+    }
+
+    fn drop_database(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            fs::remove_file(&mut self.path)?;
+
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    // SQlite don't have a HTTP connection so we don't need to check if it's ready
+    fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move { Ok(()) };
 
         Box::pin(fut)
     }
