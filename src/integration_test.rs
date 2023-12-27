@@ -133,8 +133,6 @@ mod tests {
             .len();
         assert_eq!(current_migrations, 2);
 
-        client.cleanup().await.unwrap();
-
         match database {
             // we don't need to match sqlite as sqlite driver creates the file if it doesn't exist
             Database::Postgres | Database::MySQL | Database::MariaDB | Database::SQLite => {
@@ -142,8 +140,6 @@ mod tests {
             }
             _ => {}
         };
-
-        create_client.cleanup().await.unwrap();
 
         Ok(())
     }

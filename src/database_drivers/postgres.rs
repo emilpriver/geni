@@ -125,16 +125,4 @@ impl DatabaseDriver for PostgresDriver {
 
         Box::pin(fut)
     }
-
-    fn cleanup(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
-        let fut = async move {
-            self.db.close().await?;
-
-            Ok(())
-        };
-
-        Box::pin(fut)
-    }
 }

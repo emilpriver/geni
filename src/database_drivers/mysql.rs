@@ -1,6 +1,6 @@
 use crate::config;
 use crate::database_drivers::DatabaseDriver;
-use anyhow::Result;
+use anyhow::{Error, Result};
 use sqlx::mysql::MySqlRow;
 use sqlx::{Connection, MySqlConnection, Row};
 use std::future::Future;
@@ -120,18 +120,6 @@ impl DatabaseDriver for MySQLDriver {
 
             let mut client = MySqlConnection::connect(self.url.as_str()).await?;
             sqlx::query(query.as_str()).execute(&mut client).await?;
-            Ok(())
-        };
-
-        Box::pin(fut)
-    }
-
-    fn cleanup(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
-        let fut = async move {
-            self.db.close().await?;
-
             Ok(())
         };
 

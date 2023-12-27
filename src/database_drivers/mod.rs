@@ -45,9 +45,6 @@ pub trait DatabaseDriver {
         &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
-
-    // get current schema migrations for the schema migrations table
-    fn cleanup(&self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 }
 
 // Creates a new database driver based on the database_url
