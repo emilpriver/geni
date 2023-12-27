@@ -63,15 +63,13 @@ pub async fn new(
 
     let driver = config::Database::new(parsed_db_url.scheme())?;
 
-    match (with_selected_database, driver) {
-        (
-            false,
-            config::Database::MariaDB | config::Database::Postgres | config::Database::MySQL,
-        ) => {
-            parsed_db_url.set_path("");
-            database_name = cloned_db_url.path().trim_start_matches('/');
-        }
-        (_, _) => {}
+    if let (
+        false,
+        config::Database::MariaDB | config::Database::Postgres | config::Database::MySQL,
+    ) = (with_selected_database, driver)
+    {
+        parsed_db_url.set_path("");
+        database_name = cloned_db_url.path().trim_start_matches('/');
     }
 
     let scheme = parsed_db_url.scheme();
