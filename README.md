@@ -46,6 +46,12 @@ TBA
 
 TBA
 
+### PKGX
+Run using PKGX
+```
+pkgx geni up
+```
+
 ### Docker
 
 Docker images are published to GitHub Container Registry ([ghcr.io/emilpriver/geni](https://ghcr.io/emilpriver/geni)).
