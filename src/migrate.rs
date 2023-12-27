@@ -115,7 +115,6 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
             Some(f) => {
                 println!("Running rollback for {}", migration);
                 let query = read_file_content(&f.1);
-                println!("{}", query);
 
                 database.execute(&query).await?;
 
