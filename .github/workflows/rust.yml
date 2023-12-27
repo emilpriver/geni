@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - '*'
+      - main
     tags:
       - '*'
 
@@ -100,20 +100,20 @@ jobs:
         if: ${{matrix.os != 'windows'}}
         shell: bash
         run: |
-          cp target/release/geni geni
+          cp target/release/geni geni-${{matrix.os}}-${{matrix.arch}}
       - name: Rename package 
         if: ${{matrix.os == 'windows'}}
         shell: bash
         run: |
-          cp target/release/geni.exe geni
+          cp target/release/geni.exe geni-${{matrix.os}}-${{matrix.arch}}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}
-          path: geni
+          path: geni-${{matrix.os}}-${{matrix.arch}}
       - name: Publish to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-            files: 'geni'
+            files: 'geni*'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
