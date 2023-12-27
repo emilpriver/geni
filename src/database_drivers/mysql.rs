@@ -1,6 +1,6 @@
-use crate::config;
+
 use crate::database_drivers::{utils, DatabaseDriver};
-use anyhow::{Error, Result};
+use anyhow::{Result};
 use sqlx::mysql::MySqlRow;
 use sqlx::{Connection, MySqlConnection, Row};
 use std::future::Future;

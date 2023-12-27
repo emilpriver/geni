@@ -24,7 +24,7 @@ fn get_migration_paths(folder: &PathBuf, ending: &str) -> Vec<(i64, PathBuf)> {
         .iter()
         .map(|(path, _)| {
             let filename = path.file_name().unwrap().to_str().unwrap();
-            let timestamp = filename.split_once("_").unwrap().0;
+            let timestamp = filename.split_once('_').unwrap().0;
             let timestamp = timestamp.parse::<i64>().unwrap();
 
             (timestamp, path.clone())
@@ -119,7 +119,7 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
                 database.execute(&query).await?;
 
                 database
-                    .remove_schema_migration(&migration.to_string().as_str())
+                    .remove_schema_migration(migration.to_string().as_str())
                     .await?;
             }
         }

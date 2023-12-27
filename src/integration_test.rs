@@ -15,8 +15,7 @@ mod tests {
 
     fn generate_test_migrations(migration_path: String) -> Result<()> {
         let file_endings = vec!["up", "down"];
-        let test_queries = vec![
-            (
+        let test_queries = [(
                 "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
                 "DROP TABLE users;",
             ),
@@ -39,8 +38,7 @@ mod tests {
             (
                 "CREATE TABLE users6 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
                 "DROP TABLE users6;",
-            ),
-        ];
+            )];
 
         for (index, t) in test_queries.iter().enumerate() {
             for f in &file_endings {
@@ -101,7 +99,7 @@ mod tests {
         let mut client = database_drivers::new(url, true).await.unwrap();
 
         let u = up().await;
-        assert_eq!(u.is_ok(), true);
+        assert!(u.is_ok());
 
         let current_migrations = client
             .get_or_create_schema_migrations()
@@ -112,7 +110,7 @@ mod tests {
         assert_eq!(current_migrations, 6);
 
         let d = down(&1).await;
-        assert_eq!(d.is_ok(), true);
+        assert!(d.is_ok());
 
         let current_migrations = client
             .get_or_create_schema_migrations()
@@ -122,7 +120,7 @@ mod tests {
         assert_eq!(current_migrations, 5);
 
         let d = down(&3).await;
-        assert_eq!(d.is_ok(), true);
+        assert!(d.is_ok());
 
         let current_migrations = client
             .get_or_create_schema_migrations()
