@@ -4,7 +4,7 @@ Geni is a standalone migration tool designed to work in conjunction with your pr
 
 This project was heavily inspired by [dbmate](https://github.com/amacneil/dbmate) and was created because dbmate lacked support for LibSQL.
 
-The application is developed using the Rust programming language and relies on the `[libsql-client-rs](https://github.com/libsql/libsql-client-rs)` library for SQLite and LibSQL. Moreover, it makes use of [SQLX](https://github.com/launchbadge/sqlx) to support Postgres, MariaDB, and MySQL databases. As this is written in rust is lighting fast, blazingly fast, tiny, ultra fast and memory safe
+The application is developed using the Rust programming language and relies on the [libsql-client-rs](https://github.com/libsql/libsql-client-rs) library for SQLite and LibSQL. Moreover, it makes use of [SQLX](https://github.com/launchbadge/sqlx) to support Postgres, MariaDB, and MySQL databases. As this is written in rust is lighting fast, blazingly fast, tiny, ultra fast and memory safe
 
 ## Features
 
