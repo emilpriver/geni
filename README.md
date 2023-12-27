@@ -35,7 +35,7 @@ The application is developed using the Rust programming language and relies on t
 
 ```rust
 $ sudo curl -fsSL -o /usr/local/bin/geni https://github.com/emilpriver/geni/releases/latest/download/geni-linux-amd64
-$ sudo chmod +x /usr/local/bin/dbmate
+$ sudo chmod +x /usr/local/bin/geni
 ```
 
 ### Homebrew
