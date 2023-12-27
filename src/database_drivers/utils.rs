@@ -7,6 +7,7 @@ pub async fn wait_for_database(client: &mut dyn DatabaseDriver) -> Result<()> {
 
     let mut count = 0;
     loop {
+        println!("Waiting for database to be ready");
         if count > wait_timeout {
             bail!("Database is not ready");
         }

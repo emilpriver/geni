@@ -15,7 +15,8 @@ mod tests {
 
     fn generate_test_migrations(migration_path: String) -> Result<()> {
         let file_endings = vec!["up", "down"];
-        let test_queries = [(
+        let test_queries = [
+            (
                 "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
                 "DROP TABLE users;",
             ),
@@ -38,7 +39,8 @@ mod tests {
             (
                 "CREATE TABLE users6 (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
                 "DROP TABLE users6;",
-            )];
+            ),
+        ];
 
         for (index, t) in test_queries.iter().enumerate() {
             for f in &file_endings {
@@ -79,12 +81,12 @@ mod tests {
         let migration_folder = tmp_dir.path();
         let migration_folder_string = migration_folder.to_str().unwrap();
 
+        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
         env::set_var("DATABASE_MIGRATIONS_FOLDER", migration_folder_string);
 
         generate_test_migrations(migration_folder_string.to_string()).unwrap();
 
         env::set_var("DATABASE_TOKEN", "not needed");
-
         env::set_var("DATABASE_URL", url);
 
         let mut create_client = database_drivers::new(url, false).await.unwrap();
@@ -101,33 +103,38 @@ mod tests {
         let u = up().await;
         assert!(u.is_ok());
 
-        let current_migrations = client
-            .get_or_create_schema_migrations()
-            .await
-            .unwrap()
-            .len();
-
-        assert_eq!(current_migrations, 6);
+        assert_eq!(
+            client
+                .get_or_create_schema_migrations()
+                .await
+                .unwrap()
+                .len(),
+            6,
+        );
 
         let d = down(&1).await;
         assert!(d.is_ok());
 
-        let current_migrations = client
-            .get_or_create_schema_migrations()
-            .await
-            .unwrap()
-            .len();
-        assert_eq!(current_migrations, 5);
+        assert_eq!(
+            client
+                .get_or_create_schema_migrations()
+                .await
+                .unwrap()
+                .len(),
+            5
+        );
 
         let d = down(&3).await;
         assert!(d.is_ok());
 
-        let current_migrations = client
-            .get_or_create_schema_migrations()
-            .await
-            .unwrap()
-            .len();
-        assert_eq!(current_migrations, 2);
+        assert_eq!(
+            client
+                .get_or_create_schema_migrations()
+                .await
+                .unwrap()
+                .len(),
+            2
+        );
 
         Ok(())
     }
@@ -135,8 +142,6 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_libsql() -> Result<()> {
-        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
-
         let url = "http://localhost:6000";
         test_migrate(Database::LibSQL, url).await
     }
@@ -144,8 +149,6 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_postgres() -> Result<()> {
-        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
-
         let url = "psql://postgres:mysecretpassword@localhost:6437/app?sslmode=disable";
         test_migrate(Database::Postgres, url).await
     }
@@ -153,8 +156,6 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_mysql() -> Result<()> {
-        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
-
         let url = "mysql://root:password@localhost:3306/app";
         test_migrate(Database::MySQL, url).await
     }
@@ -162,8 +163,6 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_maria() -> Result<()> {
-        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
-
         let url = "mariadb://root:password@localhost:3307/app";
         test_migrate(Database::MariaDB, url).await
     }
@@ -171,7 +170,6 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_sqlite() -> Result<()> {
-        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
         let tmp_dir = tempdir::TempDir::new("temp_migrate_sqlite_db").unwrap();
         let migration_folder = tmp_dir.path();
         let migration_folder_string = migration_folder.to_str().unwrap();

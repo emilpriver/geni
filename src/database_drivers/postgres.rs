@@ -1,6 +1,6 @@
-
+use crate::config;
 use crate::database_drivers::DatabaseDriver;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgConnection, Row};
 use std::future::Future;
@@ -16,10 +16,34 @@ pub struct PostgresDriver {
 
 impl<'a> PostgresDriver {
     pub async fn new<'b>(db_url: &str, database_name: &str) -> Result<PostgresDriver> {
-        let client = PgConnection::connect(db_url).await?;
+        let mut client = PgConnection::connect(db_url).await;
+
+        let wait_timeout = config::wait_timeout();
+
+        if client.is_err() {
+            let mut count = 0;
+            loop {
+                println!("Waiting for database to be ready");
+                if count > wait_timeout {
+                    bail!("Database is not ready");
+                }
+
+                match PgConnection::connect(db_url).await {
+                    Ok(c) => {
+                        client = Ok(c);
+                        break;
+                    }
+                    Err(_) => {
+                        count += 1;
+                        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                        continue;
+                    }
+                }
+            }
+        }
 
         let mut p = PostgresDriver {
-            db: client,
+            db: client.unwrap(),
             url: db_url.to_string(),
             db_name: database_name.to_string(),
         };
