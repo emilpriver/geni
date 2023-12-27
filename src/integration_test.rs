@@ -10,10 +10,8 @@ mod tests {
     use chrono::Utc;
     use std::fs;
     use std::io::Write;
-    use std::time::Duration;
     use std::{env, fs::File, vec};
     use tokio::test;
-    use tokio::time::sleep;
 
     fn generate_test_migrations(migration_path: String) -> Result<()> {
         let file_endings = vec!["up", "down"];
@@ -133,21 +131,14 @@ mod tests {
             .len();
         assert_eq!(current_migrations, 2);
 
-        match database {
-            // we don't need to match sqlite as sqlite driver creates the file if it doesn't exist
-            Database::Postgres | Database::MySQL | Database::MariaDB | Database::SQLite => {
-                create_client.drop_database().await.unwrap();
-            }
-            _ => {}
-        };
-
         Ok(())
     }
 
     #[test]
     #[serial]
     async fn test_migrate_libsql() -> Result<()> {
-        sleep(Duration::new(2, 0)).await; // we need to sleep to wait for the database server to start
+        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
+
         let url = "http://localhost:6000";
         test_migrate(Database::LibSQL, url).await
     }
@@ -155,7 +146,8 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_postgres() -> Result<()> {
-        sleep(Duration::new(2, 0)).await; // we need to sleep to wait for the database server to start
+        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
+
         let url = "psql://postgres:mysecretpassword@localhost:6437/app?sslmode=disable";
         test_migrate(Database::Postgres, url).await
     }
@@ -163,7 +155,8 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_mysql() -> Result<()> {
-        sleep(Duration::new(10, 0)).await; // we need to sleep to wait for the database server to start
+        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
+
         let url = "mysql://root:password@localhost:3306/app";
         test_migrate(Database::MySQL, url).await
     }
@@ -171,14 +164,16 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_maria() -> Result<()> {
-        sleep(Duration::new(10, 0)).await; // we need to sleep to wait for the database server to start
-        let url = "mysql://root:password@localhost:3307/app";
+        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
+
+        let url = "mariadb://root:password@localhost:3307/app";
         test_migrate(Database::MariaDB, url).await
     }
 
     #[test]
     #[serial]
     async fn test_migrate_sqlite() -> Result<()> {
+        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
         let tmp_dir = tempdir::TempDir::new("temp_migrate_sqlite_db").unwrap();
         let migration_folder = tmp_dir.path();
         let migration_folder_string = migration_folder.to_str().unwrap();

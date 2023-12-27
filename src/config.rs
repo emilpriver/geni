@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use std::env;
 
 pub fn migration_folder() -> String {
-    if let Ok(v) = env::var("MIGRATION_DIR") {
+    if let Ok(v) = env::var("DATABASE_MIGRATIONS_FOLDER") {
         return v;
     }
 

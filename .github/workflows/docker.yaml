@@ -1,11 +1,10 @@
-
 name: Docker
 
 on:
   pull_request:
   push:
     branches:
-      - '*'
+      - main
     tags:
       - '*'
 
