@@ -100,7 +100,7 @@ jobs:
         if: ${{matrix.os != 'windows'}}
         shell: bash
         run: |
-          cp target/release/geni geni
+          cp target/release/geni geni-${{matrix.os}}-${{matrix.arch}}
       - name: Rename package 
         if: ${{matrix.os == 'windows'}}
         shell: bash
