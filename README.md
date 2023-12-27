@@ -54,7 +54,7 @@ Docker images are published to GitHub Container Registry ([ghcr.io/emilpriver/ge
 $ docker run --rm -it --network=host ghcr.io/emilpriver/geni --help
 ```
 
-If you wish to create or apply migrations, you will need to use Docker's [bind mount](https://docs.docker.com/storage/bind-mounts/) feature to make your local working directory (`pwd`) available inside the dbmate container:
+If you wish to create or apply migrations, you will need to use Docker's [bind mount](https://docs.docker.com/storage/bind-mounts/) feature to make your local working directory (`pwd`) available inside the geni container:
 
 ```rust
 $ docker run --rm -it --network=host -v "$(pwd)/migrations:/migrations" ghcr.io/emilpriver/geni new create_users_table`
