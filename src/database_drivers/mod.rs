@@ -9,6 +9,7 @@ pub mod maria;
 pub mod mysql;
 pub mod postgres;
 pub mod sqlite;
+mod utils;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SchemaMigration {
@@ -45,6 +46,9 @@ pub trait DatabaseDriver {
         &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
+
+    // create database with the specific driver
+    fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 }
 
 // Creates a new database driver based on the database_url
@@ -88,7 +92,7 @@ pub async fn new(
             Ok(Box::new(driver))
         }
         "sqlite" | "sqlite3" => {
-            let driver = sqlite::SqliteDriver::new(parsed_db_url.as_str()).await?;
+            let driver = sqlite::SqliteDriver::new(db_url).await?;
             Ok(Box::new(driver))
         }
         "mariadb" => {

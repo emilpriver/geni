@@ -112,4 +112,11 @@ impl DatabaseDriver for SqliteDriver {
 
         Box::pin(fut)
     }
+
+    // SQlite don't have a HTTP connection so we don't need to check if it's ready
+    fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move { Ok(()) };
+
+        Box::pin(fut)
+    }
 }

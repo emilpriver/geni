@@ -6,6 +6,8 @@ use sqlx::{Connection, PgConnection, Row};
 use std::future::Future;
 use std::pin::Pin;
 
+use super::utils;
+
 pub struct PostgresDriver {
     db: PgConnection,
     url: String,
@@ -14,28 +16,17 @@ pub struct PostgresDriver {
 
 impl<'a> PostgresDriver {
     pub async fn new<'b>(db_url: &str, database_name: &str) -> Result<PostgresDriver> {
-        let mut client = PgConnection::connect(db_url).await?;
+        let client = PgConnection::connect(db_url).await?;
 
-        let wait_timeout = config::wait_timeout();
-        let mut count = 0;
-        loop {
-            if count > wait_timeout {
-                break;
-            }
-
-            if client.ping().await.is_ok() {
-                break;
-            }
-
-            count += 1;
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        }
-
-        Ok(PostgresDriver {
+        let mut p = PostgresDriver {
             db: client,
             url: db_url.to_string(),
             db_name: database_name.to_string(),
-        })
+        };
+
+        utils::wait_for_database(&mut p).await?;
+
+        Ok(p)
     }
 }
 
@@ -120,6 +111,15 @@ impl DatabaseDriver for PostgresDriver {
 
             let mut client = PgConnection::connect(self.url.as_str()).await?;
             sqlx::query(query.as_str()).execute(&mut client).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            sqlx::query("SELECT 1").execute(&mut self.db).await?;
             Ok(())
         };
 

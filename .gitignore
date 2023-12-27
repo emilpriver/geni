@@ -4,3 +4,4 @@
 .envrc
 test.sqlite
 example.db
+/tmp/

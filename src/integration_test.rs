@@ -81,7 +81,7 @@ mod tests {
         let migration_folder = tmp_dir.path();
         let migration_folder_string = migration_folder.to_str().unwrap();
 
-        env::set_var("MIGRATION_DIR", migration_folder_string);
+        env::set_var("DATABASE_MIGRATIONS_FOLDER", migration_folder_string);
 
         generate_test_migrations(migration_folder_string.to_string()).unwrap();
 

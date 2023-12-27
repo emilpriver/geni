@@ -1,5 +1,5 @@
 use crate::config;
-use crate::database_drivers::DatabaseDriver;
+use crate::database_drivers::{utils, DatabaseDriver};
 use anyhow::{Error, Result};
 use sqlx::mysql::MySqlRow;
 use sqlx::{Connection, MySqlConnection, Row};
@@ -14,28 +14,17 @@ pub struct MySQLDriver {
 
 impl<'a> MySQLDriver {
     pub async fn new<'b>(db_url: &str, database_name: &str) -> Result<MySQLDriver> {
-        let mut client = MySqlConnection::connect(db_url).await?;
+        let client = MySqlConnection::connect(db_url).await?;
 
-        let wait_timeout = config::wait_timeout();
-        let mut count = 0;
-        loop {
-            if count > wait_timeout {
-                break;
-            }
-
-            if client.ping().await.is_ok() {
-                break;
-            }
-
-            count += 1;
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        }
-
-        Ok(MySQLDriver {
+        let mut m = MySQLDriver {
             db: client,
             url: db_url.to_string(),
             db_name: database_name.to_string(),
-        })
+        };
+
+        utils::wait_for_database(&mut m).await?;
+
+        Ok(m)
     }
 }
 
@@ -120,6 +109,15 @@ impl DatabaseDriver for MySQLDriver {
 
             let mut client = MySqlConnection::connect(self.url.as_str()).await?;
             sqlx::query(query.as_str()).execute(&mut client).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            sqlx::query("SELECT 1").execute(&mut self.db).await?;
             Ok(())
         };
 

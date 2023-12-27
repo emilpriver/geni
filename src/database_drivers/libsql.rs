@@ -4,7 +4,7 @@ use libsql_client::{de, Client, Config};
 use std::future::Future;
 use std::pin::Pin;
 
-use super::SchemaMigration;
+use super::{utils, SchemaMigration};
 
 pub struct LibSQLDriver {
     db: Client,
@@ -22,7 +22,11 @@ impl<'a> LibSQLDriver {
             Err(err) => bail!("{:?}", err),
         };
 
-        Ok(LibSQLDriver { db: client })
+        let mut d = LibSQLDriver { db: client };
+
+        utils::wait_for_database(&mut d).await?;
+
+        Ok(d)
     }
 }
 
@@ -102,6 +106,17 @@ impl DatabaseDriver for LibSQLDriver {
     ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             bail!("Geni does not support dropping a database, it should be done via the respective interface")
+        };
+
+        Box::pin(fut)
+    }
+
+    // SQlite don't have a HTTP connection so we don't need to check if it's ready
+    fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            self.db.execute("SELECT 1").await?;
+
+            Ok(())
         };
 
         Box::pin(fut)
