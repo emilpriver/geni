@@ -27,14 +27,9 @@ async fn main() {
         .name("geni")
         .author("Emil Privér")
         .subcommands([
-            Command::new("new").about("Create new migration").arg(
-                Arg::new("name")
-                    .short('n')
-                    .long("name")
-                    .help("Name for your new migration")
-                    .action(ArgAction::Set)
-                    .num_args(1),
-            ),
+            Command::new("new")
+                .about("Create new migration")
+                .arg(Arg::new("name").required(true).index(1)),
             Command::new("up").about("Migrate to the latest version"),
             Command::new("down")
                 .about("Rollback to last migration")
