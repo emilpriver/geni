@@ -24,10 +24,10 @@ pub trait DatabaseDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 
     // create database with the specific driver
-    fn create(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
+    fn create_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 
     // drop database with the specific driver
-    fn drop(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
+    fn drop_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 
     // get current schema migrations for the schema migrations table
     fn get_or_create_schema_migrations(
@@ -45,37 +45,57 @@ pub trait DatabaseDriver {
         &'a mut self,
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
+
+    // get current schema migrations for the schema migrations table
+    fn cleanup(&self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 }
 
 // Creates a new database driver based on the database_url
 pub async fn new(
-    driver: config::Database,
     db_url: &str,
+    with_selected_database: bool,
 ) -> Result<Box<dyn DatabaseDriver>, anyhow::Error> {
-    let parsed_db_url = url::Url::parse(db_url)?;
+    let mut parsed_db_url = url::Url::parse(db_url)?;
+
+    let cloned_db_url = parsed_db_url.clone();
+    let mut database_name = cloned_db_url.path();
+
+    let driver = config::Database::new(parsed_db_url.scheme())?;
+
+    match (with_selected_database, driver) {
+        (
+            false,
+            config::Database::MariaDB | config::Database::Postgres | config::Database::MySQL,
+        ) => {
+            parsed_db_url.set_path("");
+            database_name = cloned_db_url.path().trim_start_matches('/');
+        }
+        (_, _) => {}
+    }
 
     let scheme = parsed_db_url.scheme();
 
     match scheme {
-        "libsql" => {
+        "http" | "https" => {
             let token = config::database_token();
-            let driver = libsql::LibSQLDriver::new(db_url, token).await?;
+            let driver = libsql::LibSQLDriver::new(parsed_db_url.as_str(), token).await?;
             Ok(Box::new(driver))
         }
-        "postgres" => {
-            let driver = postgres::PostgresDriver::new(db_url).await?;
+        "postgres" | "psql" => {
+            let driver =
+                postgres::PostgresDriver::new(parsed_db_url.as_str(), database_name).await?;
             Ok(Box::new(driver))
         }
         "mysql" => {
-            let driver = mysql::MySQLDriver::new(db_url).await?;
+            let driver = mysql::MySQLDriver::new(parsed_db_url.as_str(), database_name).await?;
             Ok(Box::new(driver))
         }
-        "sqlite" => {
-            let driver = sqlite::SqliteDriver::new(db_url).await?;
+        "sqlite" | "sqlite3" => {
+            let driver = sqlite::SqliteDriver::new(parsed_db_url.as_str()).await?;
             Ok(Box::new(driver))
         }
         "mariadb" => {
-            let driver = maria::MariaDBDriver::new(db_url).await?;
+            let driver = maria::MariaDBDriver::new(parsed_db_url.as_str(), database_name).await?;
             Ok(Box::new(driver))
         }
         _ => bail!("Unsupported database driver: {}", scheme),

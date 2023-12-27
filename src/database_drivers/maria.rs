@@ -8,10 +8,12 @@ use std::pin::Pin;
 
 pub struct MariaDBDriver {
     db: MySqlConnection,
+    url: String,
+    db_name: String,
 }
 
 impl<'a> MariaDBDriver {
-    pub async fn new<'b>(db_url: &str) -> Result<MariaDBDriver> {
+    pub async fn new<'b>(db_url: &str, database_name: &str) -> Result<MariaDBDriver> {
         let mut client = MySqlConnection::connect(db_url).await?;
 
         let wait_timeout = config::wait_timeout();
@@ -30,7 +32,11 @@ impl<'a> MariaDBDriver {
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         }
 
-        Ok(MariaDBDriver { db: client })
+        Ok(MariaDBDriver {
+            db: client,
+            url: db_url.to_string(),
+            db_name: database_name.to_string(),
+        })
     }
 }
 
@@ -90,6 +96,42 @@ impl DatabaseDriver for MariaDBDriver {
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;
+
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn create_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            let query = format!("CREATE DATABASE IF NOT EXISTS {}", self.db_name);
+
+            let mut client = MySqlConnection::connect(self.url.as_str()).await?;
+            sqlx::query(query.as_str()).execute(&mut client).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn drop_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            let query = format!("DROP DATABASE IF EXISTS {}", self.db_name);
+
+            let mut client = MySqlConnection::connect(self.url.as_str()).await?;
+            sqlx::query(query.as_str()).execute(&mut client).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn cleanup(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            self.db.close().await?;
 
             Ok(())
         };

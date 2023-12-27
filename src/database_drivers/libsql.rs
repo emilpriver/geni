@@ -87,24 +87,30 @@ impl DatabaseDriver for LibSQLDriver {
         Box::pin(fut)
     }
 
-    fn create(
+    fn create_database(
         &mut self,
     ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute("CREATE DATABASE libsql_test;").await?; // FIXME: use the database name from the config
-            Ok(())
+            bail!("Geni does not support creating a database, it should be done via the respective interface")
         };
 
         Box::pin(fut)
     }
 
-    fn drop(
+    fn drop_database(
         &mut self,
     ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute("DROP DATABASE libsql_test;").await?; // FIXME: use the database name from the config
-            Ok(())
+            bail!("Geni does not support dropping a database, it should be done via the respective interface")
         };
+
+        Box::pin(fut)
+    }
+
+    fn cleanup(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move { Ok(()) };
 
         Box::pin(fut)
     }

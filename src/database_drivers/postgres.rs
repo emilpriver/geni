@@ -8,10 +8,12 @@ use std::pin::Pin;
 
 pub struct PostgresDriver {
     db: PgConnection,
+    url: String,
+    db_name: String,
 }
 
 impl<'a> PostgresDriver {
-    pub async fn new<'b>(db_url: &str) -> Result<PostgresDriver> {
+    pub async fn new<'b>(db_url: &str, database_name: &str) -> Result<PostgresDriver> {
         let mut client = PgConnection::connect(db_url).await?;
 
         let wait_timeout = config::wait_timeout();
@@ -29,7 +31,11 @@ impl<'a> PostgresDriver {
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         }
 
-        Ok(PostgresDriver { db: client })
+        Ok(PostgresDriver {
+            db: client,
+            url: db_url.to_string(),
+            db_name: database_name.to_string(),
+        })
     }
 }
 
@@ -89,6 +95,42 @@ impl DatabaseDriver for PostgresDriver {
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;
+
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn create_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            let query = format!("CREATE DATABASE {}", self.db_name);
+
+            let mut client = PgConnection::connect(self.url.as_str()).await?;
+            sqlx::query(query.as_str()).execute(&mut client).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn drop_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            let query = format!("DROP DATABASE {}", self.db_name);
+
+            let mut client = PgConnection::connect(self.url.as_str()).await?;
+            sqlx::query(query.as_str()).execute(&mut client).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn cleanup(
+        &self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            self.db.close().await?;
 
             Ok(())
         };

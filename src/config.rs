@@ -44,30 +44,25 @@ pub enum Database {
 }
 
 impl Database {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Database::LibSQL => "libsql",
-            Database::Postgres => "postgres",
-            Database::MariaDB => "mariadb",
-            Database::MySQL => "mysql",
-            Database::SQLite => "sqlite",
-            _ => panic!("Unknown database driver"),
-        }
-    }
-}
-
-pub fn database_driver() -> Result<Database> {
-    if let Ok(v) = env::var("DATABASE") {
-        match v.as_str() {
-            "libsql" => return Ok(Database::LibSQL),
-            "postgres" => return Ok(Database::Postgres),
-            "mariadb" => return Ok(Database::MariaDB),
-            "mysql" => return Ok(Database::MySQL),
-            "sqlite" => return Ok(Database::SQLite),
-            "sqlite3" => return Ok(Database::SQLite),
+    pub fn new(s: &str) -> Result<Database> {
+        match s {
+            "https" | "http" => Ok(Database::LibSQL),
+            "psql" | "postgres" => Ok(Database::Postgres),
+            "mariadb" => Ok(Database::MariaDB),
+            "mysql" => Ok(Database::MySQL),
+            "sqlite" | "sqlite3" => Ok(Database::SQLite),
             _ => bail!("Unknown database driver"),
         }
     }
 
-    bail!("missing DATABASE env variable")
+    pub fn as_str(&self) -> Result<&str> {
+        match self {
+            Database::LibSQL => Ok("libsql"),
+            Database::Postgres => Ok("postgres"),
+            Database::MariaDB => Ok("mariadb"),
+            Database::MySQL => Ok("mysql"),
+            Database::SQLite => Ok("sqlite"),
+            _ => bail!("Unknown database driver"),
+        }
+    }
 }

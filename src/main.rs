@@ -5,6 +5,8 @@ use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 mod config;
 mod database_drivers;
 mod generate;
+mod integration_test;
+mod management;
 mod migrate;
 
 #[tokio::main]
@@ -44,6 +46,8 @@ async fn main() {
                         .action(ArgAction::Set)
                         .num_args(0..=1),
                 ),
+            Command::new("create").about("Create database"),
+            Command::new("drop").about("Drop database"),
         ])
         .get_matches();
 
@@ -57,6 +61,23 @@ async fn main() {
                 Ok(_) => info!("Success"),
             };
         }
+        Some(("create", ..)) => {
+            match management::create().await {
+                Err(err) => {
+                    error!("{:?}", err)
+                }
+                Ok(_) => info!("Success"),
+            };
+        }
+        Some(("drop", ..)) => {
+            match management::drop().await {
+                Err(err) => {
+                    error!("{:?}", err)
+                }
+                Ok(_) => info!("Success"),
+            };
+        }
+
         Some(("up", ..)) => {
             match migrate::up().await {
                 Err(err) => {
