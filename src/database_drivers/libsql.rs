@@ -32,7 +32,16 @@ impl DatabaseDriver for LibSQLDriver {
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute(query).await?;
+            let tx = self.db.transaction().await?;
+            match tx.execute(query).await {
+                Ok(_) => {
+                    tx.commit().await?;
+                }
+                Err(err) => {
+                    tx.rollback().await?;
+                    bail!("{:?}", err);
+                }
+            }
             Ok(())
         };
 
