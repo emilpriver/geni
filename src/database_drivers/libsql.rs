@@ -3,6 +3,7 @@ use anyhow::{bail, Result};
 use libsql_client::{de, Client, Config};
 use std::future::Future;
 use std::pin::Pin;
+use log::error;
 
 use super::SchemaMigration;
 
@@ -38,8 +39,8 @@ impl DatabaseDriver for LibSQLDriver {
                     tx.commit().await?;
                 }
                 Err(err) => {
+                    error!("Error executing query: {}", e);
                     tx.rollback().await?;
-                    bail!("{:?}", err);
                 }
             }
             Ok(())
