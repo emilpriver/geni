@@ -57,13 +57,13 @@ pkgx geni up
 Docker images are published to GitHub Container Registry ([ghcr.io/emilpriver/geni](https://ghcr.io/emilpriver/geni)).
 
 ```
-$ docker run --rm -it --network=host ghcr.io/emilpriver/geni --help
+$ docker run --rm -it --network=host ghcr.io/emilpriver/geni:latest --help
 ```
 
 If you wish to create or apply migrations, you will need to use Docker's [bind mount](https://docs.docker.com/storage/bind-mounts/) feature to make your local working directory (`pwd`) available inside the geni container:
 
 ```rust
-$ docker run --rm -it --network=host -v "$(pwd)/migrations:/migrations" ghcr.io/emilpriver/geni new create_users_table`
+$ docker run --rm -it --network=host -v "$(pwd)/migrations:/migrations" ghcr.io/emilpriver/geni:latest new create_users_table`
 ```
 
 ### Commands
