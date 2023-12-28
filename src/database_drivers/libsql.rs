@@ -1,9 +1,9 @@
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use libsql_client::{de, Client, Config};
+use log::error;
 use std::future::Future;
 use std::pin::Pin;
-use log::error;
 
 use super::SchemaMigration;
 
@@ -39,7 +39,7 @@ impl DatabaseDriver for LibSQLDriver {
                     tx.commit().await?;
                 }
                 Err(err) => {
-                    error!("Error executing query: {}", e);
+                    error!("Error executing query: {}", err);
                     tx.rollback().await?;
                 }
             }
