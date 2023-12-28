@@ -20,13 +20,13 @@ The application is developed using the Rust programming language and relies on t
 - Create database using  `geni create`
 - Dropping database using  `geni drop`
 - Timestamp based migrations
+- Running migrations in a transaction
 
 ## TODO
 
 - [ ]  Databases
     - [ ]  ClickHouse
 - [ ]  Schema dump that can be used in version control
-- [ ]  Running migrations in a transaction
 - [ ]  Status, see if there is any migrations that havn’t been migrated yet.
 
 ## Installation
