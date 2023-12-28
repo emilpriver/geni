@@ -16,7 +16,7 @@ impl<'a> SqliteDriver {
     pub async fn new<'b>(db_url: &str) -> Result<SqliteDriver> {
         let path = std::path::Path::new(db_url.split_once("://").unwrap().1);
 
-        if let Err(_) = File::open(path.to_str().unwrap()) {
+        if File::open(path.to_str().unwrap()).is_err() {
             if let Some(parent) = path.parent() {
                 fs::create_dir_all(parent)?;
             }

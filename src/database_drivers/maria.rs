@@ -1,7 +1,9 @@
 use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
+use log::error;
 use sqlx::mysql::MySqlRow;
+use sqlx::Executor;
 use sqlx::{Connection, MySqlConnection, Row};
 use std::future::Future;
 use std::pin::Pin;
@@ -60,7 +62,18 @@ impl DatabaseDriver for MariaDBDriver {
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query(query).execute(&mut self.db).await?;
+            let mut tx = self.db.begin().await?;
+
+            match tx.execute(query).await {
+                Ok(_) => {
+                    tx.commit().await?;
+                }
+                Err(e) => {
+                    error!("Error executing query: {}", e);
+                    tx.rollback().await?;
+                }
+            }
+
             Ok(())
         };
 
