@@ -26,7 +26,3 @@ url = { version = "2.5.0", features = ["serde"] }
 mockall = "0.12.0"
 tempfile = "3.8.1"
 tempdir = "0.3.7"
-
-[net]
-git-fetch-with-cli = true
-
