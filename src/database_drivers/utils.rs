@@ -1,13 +1,14 @@
 use super::DatabaseDriver;
 use crate::config;
 use anyhow::{bail, Result};
+use log::info;
 
 pub async fn wait_for_database(client: &mut dyn DatabaseDriver) -> Result<()> {
     let wait_timeout = config::wait_timeout();
 
     let mut count = 0;
     loop {
-        println!("Waiting for database to be ready");
+        info!("Waiting for database to be ready");
         if count > wait_timeout {
             bail!("Database is not ready");
         }

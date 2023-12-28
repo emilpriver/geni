@@ -1,7 +1,7 @@
 use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
-use log::error;
+use log::{error, info};
 use sqlx::postgres::PgRow;
 use sqlx::Executor;
 use sqlx::{Connection, PgConnection, Row};
@@ -25,7 +25,7 @@ impl<'a> PostgresDriver {
         if client.is_err() {
             let mut count = 0;
             loop {
-                println!("Waiting for database to be ready");
+                info!("Waiting for database to be ready");
                 if count > wait_timeout {
                     bail!("Database is not ready");
                 }

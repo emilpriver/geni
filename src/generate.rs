@@ -1,8 +1,8 @@
-use std::fs::{self, File};
-use std::io::Write;
-
 use anyhow::Result;
 use chrono::Utc;
+use log::info;
+use std::fs::{self, File};
+use std::io::Write;
 
 use crate::config::migration_folder;
 
@@ -28,7 +28,7 @@ pub fn generate_new_migration(migration_name: &str) -> Result<()> {
 
         file.write_all(format!("-- Write your {f} sql migration here").as_bytes())?;
 
-        println!("Generated {}", filename_str)
+        info!("Generated {}", filename_str)
     }
 
     Ok(())

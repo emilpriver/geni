@@ -5,8 +5,11 @@ use std::fs;
 use std::path::PathBuf;
 use std::vec;
 
-fn get_migration_paths(folder: &PathBuf, ending: &str) -> Vec<(i64, PathBuf)> {
-    let entries = fs::read_dir(folder).unwrap();
+fn get_migration_paths(folder: &PathBuf, ending: &str) -> Result<Vec<(i64, PathBuf)>> {
+    let entries = match fs::read_dir(folder) {
+        Ok(entries) => entries,
+        Err(error) => bail!("Couldn't read migration folder: {:?}", error),
+    };
 
     let mut migration_files = vec![];
     let end = format!(".{}.sql", ending);
@@ -33,7 +36,7 @@ fn get_migration_paths(folder: &PathBuf, ending: &str) -> Vec<(i64, PathBuf)> {
 
     sorted.sort_by(|a, b| a.0.cmp(&b.0));
 
-    sorted
+    Ok(sorted)
 }
 
 fn read_file_content(path: &PathBuf) -> String {
@@ -44,7 +47,12 @@ pub async fn up() -> Result<()> {
     let folder = migration_folder();
 
     let path = PathBuf::from(&folder);
-    let files = get_migration_paths(&path, "up");
+    let files = match get_migration_paths(&path, "up") {
+        Ok(f) => f,
+        Err(err) => {
+            bail!("Couldn't read migration folder: {:?}", err)
+        }
+    };
 
     if files.is_empty() {
         bail!(
@@ -86,7 +94,12 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
     let folder = migration_folder();
 
     let path = PathBuf::from(&folder);
-    let files = get_migration_paths(&path, "down");
+    let files = match get_migration_paths(&path, "down") {
+        Ok(f) => f,
+        Err(err) => {
+            bail!("Couldn't read migration folder: {:?}", err)
+        }
+    };
 
     if files.is_empty() {
         bail!(

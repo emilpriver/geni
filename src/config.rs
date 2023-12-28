@@ -32,7 +32,7 @@ pub fn wait_timeout() -> usize {
         }
     }
 
-    0
+    30
 }
 
 pub enum Database {
