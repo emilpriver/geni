@@ -2,6 +2,7 @@
 mod tests {
     use crate::config::Database;
     use crate::database_drivers;
+    use log::info;
     use serial_test::serial;
 
     use crate::migrate::{down, up};
@@ -67,7 +68,7 @@ mod tests {
                     _ => {}
                 }
 
-                println!("Generated {}", filename_str)
+                info!("Generated {}", filename_str)
             }
         }
 

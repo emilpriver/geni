@@ -1,12 +1,18 @@
 use crate::config::{database_url, migration_folder};
 use crate::database_drivers;
 use anyhow::{bail, Result};
+use log::info;
 use std::fs;
 use std::path::PathBuf;
 use std::vec;
 
-fn get_migration_paths(folder: &PathBuf, ending: &str) -> Vec<(i64, PathBuf)> {
-    let entries = fs::read_dir(folder).unwrap();
+fn get_migration_paths(folder: &PathBuf, ending: &str) -> Result<Vec<(i64, PathBuf)>> {
+    let entries = match fs::read_dir(folder) {
+        Ok(entries) => entries,
+        Err(err) => {
+            bail!("{:?}", err)
+        }
+    };
 
     let mut migration_files = vec![];
     let end = format!(".{}.sql", ending);
@@ -33,7 +39,7 @@ fn get_migration_paths(folder: &PathBuf, ending: &str) -> Vec<(i64, PathBuf)> {
 
     sorted.sort_by(|a, b| a.0.cmp(&b.0));
 
-    sorted
+    Ok(sorted)
 }
 
 fn read_file_content(path: &PathBuf) -> String {
@@ -44,7 +50,12 @@ pub async fn up() -> Result<()> {
     let folder = migration_folder();
 
     let path = PathBuf::from(&folder);
-    let files = get_migration_paths(&path, "up");
+    let files = match get_migration_paths(&path, "up") {
+        Ok(f) => f,
+        Err(err) => {
+            bail!("Couldn't read migration folder: {:?}", err)
+        }
+    };
 
     if files.is_empty() {
         bail!(
@@ -70,7 +81,7 @@ pub async fn up() -> Result<()> {
         let id = Box::new(f.0.to_string());
 
         if !migrations.contains(&id) {
-            println!("Running migration {}", id);
+            info!("Running migration {}", id);
             let query = read_file_content(&f.1);
 
             database.execute(&query).await?;
@@ -86,7 +97,12 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
     let folder = migration_folder();
 
     let path = PathBuf::from(&folder);
-    let files = get_migration_paths(&path, "down");
+    let files = match get_migration_paths(&path, "down") {
+        Ok(f) => f,
+        Err(err) => {
+            bail!("Couldn't read migration folder: {:?}", err)
+        }
+    };
 
     if files.is_empty() {
         bail!(
@@ -113,7 +129,7 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
         match rollback_file {
             None => bail!("No rollback file found for {}", migration),
             Some(f) => {
-                println!("Running rollback for {}", migration);
+                info!("Running rollback for {}", migration);
                 let query = read_file_content(&f.1);
 
                 database.execute(&query).await?;
