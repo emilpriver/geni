@@ -13,15 +13,9 @@ env:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install docker for macos
-      if: startsWith(matrix.os, 'macos-')
-      uses: douglascamata/setup-docker-macos-action@v1-alpha
     - name: Databases
       run: docker compose up -d
     - name: Run tests
@@ -130,6 +124,9 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: cargo publish --token ${CRATES_TOKEN}
-        env:
-          CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+      - name: Crates.io Login 
+        run: cargo login ${CRATES_TOKEN}
+      - name: Install cargo release 
+        run: cargo install cargo-release
+      - name: Publish version
+        run: cargo release --execute --no-confirm ${{ github.ref_name }} 
