@@ -8,6 +8,8 @@ mod generate;
 mod integration_test;
 mod management;
 mod migrate;
+mod status;
+mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -43,6 +45,16 @@ async fn main() {
                 ),
             Command::new("create").about("Create database"),
             Command::new("drop").about("Drop database"),
+            Command::new("status")
+                .about("Show current migrations to apply")
+                .arg(
+                    Arg::new("amount")
+                        .short('a')
+                        .long("amount")
+                        .help("Amount of migrations to rollback")
+                        .action(ArgAction::Set)
+                        .num_args(0..=1),
+                ),
         ])
         .get_matches();
 
@@ -72,7 +84,6 @@ async fn main() {
                 Ok(_) => info!("Success"),
             };
         }
-
         Some(("up", ..)) => {
             match migrate::up().await {
                 Err(err) => {
@@ -89,6 +100,14 @@ async fn main() {
                 .expect("Couldn't parse amount, is it a number?");
 
             match migrate::down(&rollback_amount).await {
+                Err(err) => {
+                    error!("{:?}", err)
+                }
+                Ok(_) => info!("Success"),
+            };
+        }
+        Some(("status", ..)) => {
+            match migrate::up().await {
                 Err(err) => {
                     error!("{:?}", err)
                 }
