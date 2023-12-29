@@ -129,4 +129,6 @@ jobs:
       - name: Install cargo release 
         run: cargo install cargo-release
       - name: Publish version
-        run: cargo release --execute --no-confirm ${{ github.ref_name#v }} 
+        run: |
+          TAG=${GITHUB_REF_NAME#v}
+          cargo release --execute --no-confirm ${ TAG } 
