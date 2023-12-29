@@ -162,4 +162,14 @@ impl DatabaseDriver for MariaDBDriver {
 
         Box::pin(fut)
     }
+
+    fn dump_database_schema(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            bail!("Geni does not support dumping a database, it should be done via the respective interface")
+        };
+
+        Box::pin(fut)
+    }
 }
