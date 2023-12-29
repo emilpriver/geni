@@ -120,6 +120,7 @@ jobs:
   release-cargo:
     needs: [build-binary]
     runs-on: ${{ matrix.image }}
+    if: startsWith(github.ref, 'refs/tags/')
     steps:    
       - name: Checkout
         uses: actions/checkout@v4
