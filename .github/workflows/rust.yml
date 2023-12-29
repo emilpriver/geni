@@ -125,7 +125,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Crates.io Login 
-        run: cargo login ${CRATES_TOKEN}
+        run: cargo login ${{secrets.CRATES_TOKEN}} 
       - name: Install cargo release 
         run: cargo install cargo-release
       - name: Publish version
