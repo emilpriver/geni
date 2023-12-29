@@ -21,7 +21,7 @@ async fn main() {
 
     let matches = Command::new("libsql-migeate")
         .about("Database migration tool")
-        .version("1.0.0")
+        .version("0.0.2")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .name("geni")
