@@ -1,6 +1,6 @@
 [package]
 name = "cargo-geni"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 resolver = "2"
 description = "A database CLI migration tool"
