@@ -3,6 +3,9 @@ name = "cargo-geni"
 version = "0.0.2"
 edition = "2021"
 resolver = "2"
+description = "A database CLI migration tool"
+repository = "https://github.com/emilpriver/geni"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
