@@ -100,12 +100,12 @@ jobs:
         if: ${{matrix.os != 'windows'}}
         shell: bash
         run: |
-          cp target/release/geni geni-${{matrix.os}}-${{matrix.arch}}
+          cp target/release/cargo-geni geni-${{matrix.os}}-${{matrix.arch}}
       - name: Rename package 
         if: ${{matrix.os == 'windows'}}
         shell: bash
         run: |
-          cp target/release/geni.exe geni-${{matrix.os}}-${{matrix.arch}}
+          cp target/release/cargo-geni.exe geni-${{matrix.os}}-${{matrix.arch}}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}
