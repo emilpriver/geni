@@ -1,5 +1,5 @@
 [package]
-name = "cargo-geni"
+name = "geni"
 version = "0.0.2"
 edition = "2021"
 resolver = "2"

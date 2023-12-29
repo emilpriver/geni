@@ -57,7 +57,7 @@ pkgx geni up
 ### Cargo
 
 ```
-cargo install cargo-geni
+cargo install geni
 ```
 
 ### Docker
