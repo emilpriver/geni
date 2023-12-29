@@ -19,7 +19,7 @@ async fn main() {
     )
     .expect("Failed to initialize logger");
 
-    let matches = Command::new("libsql-migeate")
+    let matches = Command::new("geni")
         .about("Database migration tool")
         .version("0.0.2")
         .subcommand_required(true)
