@@ -48,10 +48,10 @@ async fn main() {
             Command::new("status")
                 .about("Show current migrations to apply")
                 .arg(
-                    Arg::new("amount")
-                        .short('a')
-                        .long("amount")
-                        .help("Amount of migrations to rollback")
+                    Arg::new("verbose")
+                        .short('v')
+                        .long("verbose")
+                        .help("Include migration content for the non applied migrations")
                         .action(ArgAction::Set)
                         .num_args(0..=1),
                 ),
@@ -106,12 +106,14 @@ async fn main() {
                 Ok(_) => info!("Success"),
             };
         }
-        Some(("status", ..)) => {
-            match migrate::up().await {
+        Some(("status", query_matches)) => {
+            let verbose = query_matches.contains_id("verbose");
+
+            match status::status(verbose).await {
                 Err(err) => {
                     error!("{:?}", err)
                 }
-                Ok(_) => info!("Success"),
+                Ok(_) => {}
             };
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable

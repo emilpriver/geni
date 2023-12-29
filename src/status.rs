@@ -8,60 +8,39 @@ use crate::{
 use anyhow::{bail, Result};
 use log::info;
 
-pub async fn status() -> Result<()> {
+pub async fn status(verbose: bool) -> Result<()> {
     let database_url = database_url()?;
     let mut database = database_drivers::new(&database_url, true).await?;
     let folder = migration_folder();
 
     let path = PathBuf::from(&folder);
-    let files = match get_local_migrations(&path, "down") {
+    let files = match get_local_migrations(&path, "up") {
         Ok(f) => f,
         Err(err) => {
             bail!("Couldn't read migration folder: {:?}", err)
         }
     };
 
-    let mut migrations = get_local_migrations(folder, ending).await?;
-    migrations.sort_by(|a, b| a.version.cmp(&b.version));
+    let migrations: Vec<String> = database
+        .get_or_create_schema_migrations()
+        .await?
+        .into_iter()
+        .map(|s| s.into_boxed_str())
+        .collect::<Vec<Box<str>>>()
+        .into_iter()
+        .map(|s| s.into())
+        .collect();
 
-    let mut applied_migrations = get_applied_migrations().await?;
-    applied_migrations.sort_by(|a, b| a.version.cmp(&b.version));
+    for f in files {
+        let id = Box::new(f.0.to_string());
 
-    let mut migrations_to_apply = Vec::new();
-    let mut migrations_to_revert = Vec::new();
-
-    for migration in migrations {
-        if applied_migrations.contains(&migration) {
-            continue;
-        }
-
-        migrations_to_apply.push(migration);
-    }
-
-    for applied_migration in applied_migrations {
-        if migrations.contains(&applied_migration) {
-            continue;
-        }
-
-        migrations_to_revert.push(applied_migration);
-    }
-
-    if migrations_to_apply.is_empty() && migrations_to_revert.is_empty() {
-        info!("No migrations to apply or revert");
-        return Ok(());
-    }
-
-    if !migrations_to_apply.is_empty() {
-        info!("Migrations to apply:");
-        for migration in migrations_to_apply {
-            info!("  {}", migration.name);
-        }
-    }
-
-    if !migrations_to_revert.is_empty() {
-        info!("Migrations to revert:");
-        for migration in migrations_to_revert {
-            info!("  {}", migration.name);
+        if !migrations.contains(&id) {
+            if verbose {
+                let query = read_file_content(&f.1);
+                info!("Pending migration {}: \n {}", id, query);
+            } else {
+                info!("Pending {}", id);
+            }
         }
     }
 
