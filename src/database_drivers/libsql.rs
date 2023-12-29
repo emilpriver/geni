@@ -127,4 +127,14 @@ impl DatabaseDriver for LibSQLDriver {
 
         Box::pin(fut)
     }
+
+    fn dump_database_schema(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            bail!("Geni does not support dumping a database, it should be done via the respective interface")
+        };
+
+        Box::pin(fut)
+    }
 }

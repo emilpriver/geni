@@ -49,6 +49,11 @@ pub trait DatabaseDriver {
 
     // create database with the specific driver
     fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
+
+    // dump the database
+    fn dump_database_schema(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 }
 
 // Creates a new database driver based on the database_url
