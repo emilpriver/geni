@@ -339,6 +339,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo-geni"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "clap",
+ "futures",
+ "libsql-client",
+ "log",
+ "mockall",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "simplelog",
+ "sqlx",
+ "tempdir",
+ "tempfile",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -839,29 +862,6 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
-]
-
-[[package]]
-name = "geni"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "clap",
- "futures",
- "libsql-client",
- "log",
- "mockall",
- "serde",
- "serde_json",
- "serial_test",
- "simplelog",
- "sqlx",
- "tempdir",
- "tempfile",
- "tokio",
- "url",
 ]
 
 [[package]]
