@@ -115,7 +115,7 @@ jobs:
     needs: [build-binary]
     runs-on: "ubuntu-latest"
     if: startsWith(github.ref, 'refs/tags/')
-    steps:    
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install stable toolchain
@@ -129,4 +129,4 @@ jobs:
       - name: Install cargo release 
         run: cargo install cargo-release
       - name: Publish version
-        run: cargo release --execute --no-confirm ${{ github.ref_name }} 
+        run: cargo release --execute --no-confirm ${{ github.ref_name#v }} 
