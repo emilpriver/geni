@@ -54,6 +54,12 @@ Run using PKGX
 pkgx geni up
 ```
 
+### Cargo
+
+```
+cargo install cargo-geni
+```
+
 ### Docker
 
 Docker images are published to GitHub Container Registry ([ghcr.io/emilpriver/geni](https://ghcr.io/emilpriver/geni)).
