@@ -33,14 +33,16 @@ The application is developed using the Rust programming language and relies on t
 
 ### Github
 
-```rust
+```
 $ sudo curl -fsSL -o /usr/local/bin/geni https://github.com/emilpriver/geni/releases/latest/download/geni-linux-amd64
 $ sudo chmod +x /usr/local/bin/geni
 ```
 
 ### Homebrew
 
-TBA
+```
+brew install emilpriver/geni/geni
+```
 
 ### Scoop
 
@@ -50,6 +52,12 @@ TBA
 Run using PKGX
 ```
 pkgx geni up
+```
+
+### Cargo
+
+```
+cargo install geni
 ```
 
 ### Docker
@@ -62,7 +70,7 @@ $ docker run --rm -it --network=host ghcr.io/emilpriver/geni:latest --help
 
 If you wish to create or apply migrations, you will need to use Docker's [bind mount](https://docs.docker.com/storage/bind-mounts/) feature to make your local working directory (`pwd`) available inside the geni container:
 
-```rust
+```
 $ docker run --rm -it --network=host -v "$(pwd)/migrations:/migrations" ghcr.io/emilpriver/geni:latest new create_users_table`
 ```
 

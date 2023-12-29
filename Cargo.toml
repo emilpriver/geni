@@ -1,8 +1,11 @@
 [package]
 name = "geni"
-version = "0.1.0"
+version = "0.0.2"
 edition = "2021"
 resolver = "2"
+description = "A database CLI migration tool"
+repository = "https://github.com/emilpriver/geni"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,7 +15,7 @@ async-trait = "0.1.74"
 chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.4.11", features = ["env", "string", "derive", "cargo"] }
 futures = "0.3.29"
-libsql-client = { git = "https://github.com/libsql/libsql-client-rs.git", rev = "a432666", features = ["futures-util", "http"] }
+libsql-client = { git = "https://github.com/libsql/libsql-client-rs.git", version = "0.33.2", rev = "a432666", features = ["futures-util", "http"] }
 log = { version = "0.4.20", features = ["max_level_debug", "serde"] }
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
