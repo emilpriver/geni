@@ -21,7 +21,7 @@ async fn main() {
 
     let matches = Command::new("geni")
         .about("Database migration tool")
-        .version("0.0.2")
+        .version("0.0.3")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .name("geni")
