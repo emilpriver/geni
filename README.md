@@ -82,6 +82,7 @@ geni up     # Run any pending migration
 geni down   # Rollback migrations, use --amount to speify how many migrations(default 1)
 geni create # Create the database, only works for Postgres, MariaDB and MySQL. If you use SQLite will geni create the file before running migrations if the sqlite file don't exist. LibSQL should be create using respective interface.
 geni drop   # Remove database
+geni status # Print pending migrations
 geni help   # Print help message
 ```
 
