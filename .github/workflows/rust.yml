@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Run verify-version.sh
+      run: .github/workflows/scripts/verify-version.sh
     - name: Databases
       run: docker compose up -d
     - name: Run tests
