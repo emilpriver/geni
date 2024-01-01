@@ -139,4 +139,4 @@ jobs:
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       - name: Publish version
         run: |
-          cargo release --execute --no-confirm ${VERSION} 
+          cargo release --execute --no-push --no-confirm ${VERSION}
