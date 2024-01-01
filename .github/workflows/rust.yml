@@ -17,6 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Run verify-version.sh
+      if: startsWith(github.ref, 'refs/tags/')
       run: chmod +x scripts/verify-version.sh && scripts/verify-version.sh
     - name: Databases
       run: docker compose up -d
