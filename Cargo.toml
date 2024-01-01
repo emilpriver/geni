@@ -1,11 +1,12 @@
 [package]
 name = "geni"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 resolver = "2"
-description = "A database CLI migration tool"
+description = "A standaline database CLI migration tool"
 repository = "https://github.com/emilpriver/geni"
 license = "MIT"
+authors = ["Emil Privér"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

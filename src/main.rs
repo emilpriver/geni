@@ -1,4 +1,4 @@
-use clap::{Arg, ArgAction, Command};
+use clap::{crate_authors, crate_description, crate_version, Arg, ArgAction, Command};
 use log::{error, info};
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
@@ -22,12 +22,12 @@ async fn main() {
     .expect("Failed to initialize logger");
 
     let matches = Command::new("geni")
-        .about("Database migration tool")
-        .version("0.0.4")
+        .about(crate_description!())
+        .version(crate_version!())
         .subcommand_required(true)
         .arg_required_else_help(true)
         .name("geni")
-        .author("Emil Privér")
+        .author(crate_authors!())
         .subcommands([
             Command::new("new")
                 .about("Create new migration")
