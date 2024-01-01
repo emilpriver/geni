@@ -23,7 +23,7 @@ async fn main() {
 
     let matches = Command::new("geni")
         .about(crate_description!())
-        .version(crate_version!())
+        .version(format!("v{}", crate_version!()))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .name("geni")
