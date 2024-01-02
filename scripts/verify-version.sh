@@ -3,15 +3,10 @@
 # Get the version from Cargo.toml
 cargo_version=$(grep -oP '(?<=version = ")[^"]*' Cargo.toml)
 echo $cargo_version
-# Get the new GitHub Actions tag
-github_tag=$GITHUB_REF
-
-# Extract the version from the tag
-tag_version=$(echo "$github_tag" | grep -oP '(?<=refs/tags/v)[^"]*')
-echo $tag_version
+echo $GITHUB_REF_NAME
 
 # Compare the versions
-if [[ "v$cargo_version" == "$tag_version" ]]; then
+if [[ "v$cargo_version" == "$GITHUB_REF_NAME" ]]; then
 	echo "Version in Cargo.toml matches the new GitHub Actions tag."
 else
 	echo "Version in Cargo.toml does not match the new GitHub Actions tag."
