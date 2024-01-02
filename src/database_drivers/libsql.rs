@@ -1,7 +1,6 @@
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
-use libsql_client::{de, Client, Config};
-use log::error;
+use libsql_client::{de, Client, Config, Statement};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -33,16 +32,14 @@ impl DatabaseDriver for LibSQLDriver {
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let tx = self.db.transaction().await?;
-            match tx.execute(query).await {
-                Ok(_) => {
-                    tx.commit().await?;
-                }
-                Err(err) => {
-                    error!("Error executing query: {}", err);
-                    tx.rollback().await?;
-                }
-            }
+            let queries = query
+                .split(";")
+                .filter(|x| !x.trim().is_empty())
+                .map(|x| Statement::new(x))
+                .collect::<Vec<Statement>>();
+
+            self.db.batch(queries).await?;
+
             Ok(())
         };
 
