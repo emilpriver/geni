@@ -167,6 +167,9 @@ impl DatabaseDriver for MariaDBDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
+            // check if mysqldump is installed
+            let mut cmd = tokio::process::Command::new("which");
+
             bail!("Geni does not support dumping a database, it should be done via the respective interface")
         };
 
