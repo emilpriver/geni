@@ -39,7 +39,14 @@ impl DatabaseDriver for SqliteDriver {
         query: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute(query)?;
+            let queries = query
+                .split(";")
+                .map(|x| x.trim())
+                .filter(|x| !x.is_empty())
+                .collect::<Vec<&str>>();
+            for query in queries {
+                self.db.execute(query)?;
+            }
             Ok(())
         };
 

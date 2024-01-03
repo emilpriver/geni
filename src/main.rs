@@ -1,4 +1,4 @@
-use clap::{Arg, ArgAction, Command};
+use clap::{crate_authors, crate_description, crate_version, Arg, ArgAction, Command};
 use log::{error, info};
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
@@ -8,6 +8,8 @@ mod generate;
 mod integration_test;
 mod management;
 mod migrate;
+mod status;
+mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -20,12 +22,12 @@ async fn main() {
     .expect("Failed to initialize logger");
 
     let matches = Command::new("geni")
-        .about("Database migration tool")
-        .version("0.0.3")
+        .about(crate_description!())
+        .version(format!("v{}", crate_version!()))
         .subcommand_required(true)
         .arg_required_else_help(true)
         .name("geni")
-        .author("Emil Privér")
+        .author(crate_authors!())
         .subcommands([
             Command::new("new")
                 .about("Create new migration")
@@ -43,6 +45,16 @@ async fn main() {
                 ),
             Command::new("create").about("Create database"),
             Command::new("drop").about("Drop database"),
+            Command::new("status")
+                .about("Show current migrations to apply")
+                .arg(
+                    Arg::new("verbose")
+                        .short('v')
+                        .long("verbose")
+                        .help("Include migration content for the non applied migrations")
+                        .action(ArgAction::Set)
+                        .num_args(0..=1),
+                ),
         ])
         .get_matches();
 
@@ -72,7 +84,6 @@ async fn main() {
                 Ok(_) => info!("Success"),
             };
         }
-
         Some(("up", ..)) => {
             match migrate::up().await {
                 Err(err) => {
@@ -93,6 +104,16 @@ async fn main() {
                     error!("{:?}", err)
                 }
                 Ok(_) => info!("Success"),
+            };
+        }
+        Some(("status", query_matches)) => {
+            let verbose = query_matches.contains_id("verbose");
+
+            match status::status(verbose).await {
+                Err(err) => {
+                    error!("{:?}", err)
+                }
+                Ok(_) => {}
             };
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable

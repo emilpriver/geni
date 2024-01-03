@@ -21,13 +21,13 @@ The application is developed using the Rust programming language and relies on t
 - Dropping database using  `geni drop`
 - Timestamp based migrations
 - Running migrations in a transaction
+- Status command to see which migrations that is pending to be applied 
 
 ## TODO
 
 - [ ]  Databases
     - [ ]  ClickHouse
 - [ ]  Schema dump that can be used in version control
-- [ ]  Status, see if there is any migrations that havn’t been migrated yet.
 
 ## Installation
 
@@ -82,6 +82,7 @@ geni up     # Run any pending migration
 geni down   # Rollback migrations, use --amount to speify how many migrations(default 1)
 geni create # Create the database, only works for Postgres, MariaDB and MySQL. If you use SQLite will geni create the file before running migrations if the sqlite file don't exist. LibSQL should be create using respective interface.
 geni drop   # Remove database
+geni status # Print pending migrations
 geni help   # Print help message
 ```
 

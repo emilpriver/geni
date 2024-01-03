@@ -18,7 +18,7 @@ mod tests {
         let file_endings = vec!["up", "down"];
         let test_queries = [
             (
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);",
+                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE computers (id INTEGER PRIMARY KEY, name TEXT NOT NULL); ;",
                 "DROP TABLE users;",
             ),
             (
