@@ -7,12 +7,14 @@ use sqlx::Executor;
 use sqlx::{Connection, MySqlConnection, Row};
 use std::future::Future;
 use std::pin::Pin;
+use tokio::process::Command;
 
 use super::utils;
 
 pub struct MariaDBDriver {
     db: MySqlConnection,
     url: String,
+    url_path: url::Url,
     db_name: String,
 }
 
@@ -44,10 +46,16 @@ impl<'a> MariaDBDriver {
             }
         }
 
+        let mut url_path = url::Url::parse(db_url)?;
+        if url_path.host_str().unwrap() == "localhost" {
+            url_path.set_host(Some("127.0.0.1"))?;
+        }
+
         let mut m = MariaDBDriver {
             db: client.unwrap(),
             url: db_url.to_string(),
             db_name: database_name.to_string(),
+            url_path,
         };
 
         utils::wait_for_database(&mut m).await?;
@@ -167,10 +175,33 @@ impl DatabaseDriver for MariaDBDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            // check if mysqldump is installed
-            let mut cmd = tokio::process::Command::new("which");
+            if let Err(err) = which::which("mariadb-dump") {
+                bail!("mariadb-dump not found in PATH, is i installed? {}", err);
+            };
 
-            bail!("Geni does not support dumping a database, it should be done via the respective interface")
+            let username = self.url_path.username();
+            let host = self.url_path.host_str().unwrap();
+            let password = self.url_path.password().unwrap();
+            let schema_path = format!(" > {}/schema.sql", config::migration_folder());
+
+            let args: Vec<&str> = [
+                "-h",
+                host,
+                "-u",
+                username,
+                "-p",
+                password,
+                "--no-data",
+                schema_path.as_str(),
+            ]
+            .iter()
+            .map(|s| *s)
+            .collect();
+            println!("args: {:?}", args);
+
+            Command::new("mysqldump").args(args).output().await?;
+
+            Ok(())
         };
 
         Box::pin(fut)
