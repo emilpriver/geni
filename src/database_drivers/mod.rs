@@ -64,7 +64,7 @@ pub async fn new(
     let mut parsed_db_url = url::Url::parse(db_url)?;
 
     let cloned_db_url = parsed_db_url.clone();
-    let mut database_name = cloned_db_url.path();
+    let mut database_name = cloned_db_url.path().trim_start_matches('/');
 
     let driver = config::Database::new(parsed_db_url.scheme())?;
 

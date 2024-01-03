@@ -175,32 +175,38 @@ impl DatabaseDriver for MySQLDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            if let Err(err) = which::which("mariadb-dump") {
+            if let Err(err) = which::which("mysqldump") {
                 bail!("mariadb-dump not found in PATH, is i installed? {}", err);
             };
 
             let host = format!("--host={}", self.url_path.host_str().unwrap());
-            let username = format!("--username={}", self.url_path.username());
+            let username = format!("--user={}", self.url_path.username());
             let password = format!("--password={}", self.url_path.password().unwrap());
-            let schema_path = format!(" > {}/schema.sql", config::migration_folder());
+            let port = format!("--port={}", self.url_path.port().unwrap());
 
             let args: Vec<&str> = [
                 "--opt",
-                "--noroutines",
                 "--skip-dump-date",
                 "--skip-add-drop-table",
                 "--no-data",
+                port.as_str(),
                 host.as_str(),
                 username.as_str(),
                 password.as_str(),
-                schema_path.as_str(),
+                self.db_name.as_str(),
             ]
             .iter()
             .map(|s| *s)
             .collect();
-            println!("args: {:?}", args);
 
-            Command::new("mysqldump").args(args).output().await?;
+            let res = Command::new("mysqldump").args(args).output().await?;
+            if !res.status.success() {
+                bail!("mysqldump failed: {}", String::from_utf8_lossy(&res.stderr));
+            }
+
+            let schema = String::from_utf8_lossy(&res.stdout);
+
+            utils::write_to_schema_file(schema.to_string()).await?;
 
             Ok(())
         };

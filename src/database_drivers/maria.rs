@@ -175,33 +175,7 @@ impl DatabaseDriver for MariaDBDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            if let Err(err) = which::which("mariadb-dump") {
-                bail!("mariadb-dump not found in PATH, is i installed? {}", err);
-            };
-
-            let username = self.url_path.username();
-            let host = self.url_path.host_str().unwrap();
-            let password = self.url_path.password().unwrap();
-            let schema_path = format!(" > {}/schema.sql", config::migration_folder());
-
-            let args: Vec<&str> = [
-                "-h",
-                host,
-                "-u",
-                username,
-                "-p",
-                password,
-                "--no-data",
-                schema_path.as_str(),
-            ]
-            .iter()
-            .map(|s| *s)
-            .collect();
-            println!("args: {:?}", args);
-
-            Command::new("mysqldump").args(args).output().await?;
-
-            Ok(())
+            bail!("Not implemented");
         };
 
         Box::pin(fut)
