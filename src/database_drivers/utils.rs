@@ -28,7 +28,7 @@ pub async fn wait_for_database(client: &mut dyn DatabaseDriver) -> Result<()> {
 }
 
 pub async fn write_to_schema_file(content: String) -> Result<()> {
-    let schema_path = format!("{}/schema.sql", config::migration_folder());
+    let schema_path = format!("{}/{}", config::migration_folder(), config::schema_file());
     let path = Path::new(schema_path.as_str());
 
     if File::open(path.to_str().unwrap()).is_err() {

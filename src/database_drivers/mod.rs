@@ -85,7 +85,7 @@ pub async fn new(
             let driver = libsql::LibSQLDriver::new(parsed_db_url.as_str(), token).await?;
             Ok(Box::new(driver))
         }
-        "postgres" | "psql" => {
+        "postgres" | "psql" | "postgresql" => {
             let driver =
                 postgres::PostgresDriver::new(parsed_db_url.as_str(), database_name).await?;
             Ok(Box::new(driver))

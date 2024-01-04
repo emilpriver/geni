@@ -1,3 +1,4 @@
+use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use libsql_client::{de, Client, Config, Statement};
@@ -50,11 +51,16 @@ impl DatabaseDriver for LibSQLDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
-            let query =
-                "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY);";
+            let query = format!(
+                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) NOT NULL PRIMARY KEY);",
+                config::migrations_table()
+            );
             self.db.execute(query).await?;
-            let query = "SELECT id FROM schema_migrations ORDER BY id DESC;";
-            let result = self.db.execute(query).await?;
+            let query = format!(
+                "SELECT id FROM {} ORDER BY id DESC;",
+                config::migrations_table()
+            );
+            let result = self.db.execute(query.as_str()).await?;
 
             let rows = result.rows.iter().map(de::from_row);
 
@@ -72,7 +78,14 @@ impl DatabaseDriver for LibSQLDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             self.db
-                .execute(format!("INSERT INTO schema_migrations (id) VALUES ('{}');", id).as_str())
+                .execute(
+                    format!(
+                        "INSERT INTO {} (id) VALUES ('{}');",
+                        config::migrations_table(),
+                        id
+                    )
+                    .as_str(),
+                )
                 .await?;
             Ok(())
         };
@@ -86,7 +99,14 @@ impl DatabaseDriver for LibSQLDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             self.db
-                .execute(format!("DELETE FROM schema_migrations WHERE id = '{}';", id).as_str())
+                .execute(
+                    format!(
+                        "DELETE FROM {} WHERE id = '{}';",
+                        config::migrations_table(),
+                        id
+                    )
+                    .as_str(),
+                )
                 .await?;
             Ok(())
         };

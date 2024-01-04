@@ -1,3 +1,4 @@
+use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use libsql_client::{de, local::Client};
@@ -57,10 +58,17 @@ impl DatabaseDriver for SqliteDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
-            let query =
-                "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY);";
+            let query = format!(
+                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY);",
+                config::migrations_table()
+            );
             self.db.execute(query)?;
-            let query = "SELECT id FROM schema_migrations ORDER BY id DESC;";
+
+            let query = format!(
+                "SELECT id FROM {} ORDER BY id DESC;",
+                config::migrations_table()
+            );
+
             let result = self.db.execute(query)?;
 
             let rows = result.rows.iter().map(de::from_row);
@@ -79,7 +87,12 @@ impl DatabaseDriver for SqliteDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             self.db.execute(
-                format!("INSERT INTO schema_migrations (id) VALUES ('{}');", id).as_str(),
+                format!(
+                    "INSERT INTO {} (id) VALUES ('{}');",
+                    config::migrations_table(),
+                    id,
+                )
+                .as_str(),
             )?;
             Ok(())
         };
@@ -92,25 +105,27 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db
-                .execute(format!("DELETE FROM schema_migrations WHERE id = '{}';", id).as_str())?;
+            self.db.execute(
+                format!(
+                    "DELETE FROM {} WHERE id = '{}';",
+                    config::migrations_table(),
+                    id
+                )
+                .as_str(),
+            )?;
             Ok(())
         };
 
         Box::pin(fut)
     }
 
-    fn create_database(
-        &mut self,
-    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+    fn create_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move { Ok(()) };
 
         Box::pin(fut)
     }
 
-    fn drop_database(
-        &mut self,
-    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+    fn drop_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             fs::remove_file(&mut self.path)?;
 
@@ -129,7 +144,7 @@ impl DatabaseDriver for SqliteDriver {
 
     fn dump_database_schema(
         &mut self,
-    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             bail!("Geni does not support dumping a database, it should be done via the respective interface")
         };

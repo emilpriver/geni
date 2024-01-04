@@ -2,6 +2,7 @@ use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use log::{error, info};
+use regex::Regex;
 use sqlx::mysql::MySqlRow;
 use sqlx::Executor;
 use sqlx::{Connection, MySqlConnection, Row};
@@ -92,11 +93,16 @@ impl DatabaseDriver for MariaDBDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
-            let query =
-                "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY)";
-            sqlx::query(query).execute(&mut self.db).await?;
-            let query = "SELECT id FROM schema_migrations ORDER BY id DESC";
-            let result: Vec<String> = sqlx::query(query)
+            let query = format!(
+                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
+                config::migrations_table()
+            );
+            sqlx::query(query.as_str()).execute(&mut self.db).await?;
+            let query = format!(
+                "SELECT id FROM {} ORDER BY id DESC",
+                config::migrations_table()
+            );
+            let result: Vec<String> = sqlx::query(query.as_str())
                 .map(|row: MySqlRow| row.get("id"))
                 .fetch_all(&mut self.db)
                 .await?;
@@ -112,7 +118,8 @@ impl DatabaseDriver for MariaDBDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("INSERT INTO schema_migrations (id) VALUES (?)")
+            let query = format!("INSERT INTO {} (id) VALUES (?)", config::migrations_table());
+            sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;
@@ -127,7 +134,8 @@ impl DatabaseDriver for MariaDBDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("delete from schema_migrations where id = ?")
+            let query = format!("DELETE FROM {} WHERE id = ?", config::migrations_table());
+            sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;
@@ -173,9 +181,53 @@ impl DatabaseDriver for MariaDBDriver {
 
     fn dump_database_schema(
         &mut self,
-    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            bail!("Not implemented");
+            if let Err(err) = which::which("mysqldump") {
+                bail!("mariadb-dump not found in PATH, is i installed? {}", err);
+            };
+
+            let host = format!("--host={}", self.url_path.host_str().unwrap());
+            let username = format!("--user={}", self.url_path.username());
+            let password = format!("--password={}", self.url_path.password().unwrap());
+            let port = format!("--port={}", self.url_path.port().unwrap());
+
+            let args: Vec<&str> = [
+                "--opt",
+                "--skip-dump-date",
+                "--skip-add-drop-table",
+                "--no-data",
+                port.as_str(),
+                host.as_str(),
+                username.as_str(),
+                password.as_str(),
+                self.db_name.as_str(),
+            ]
+            .iter()
+            .map(|s| *s)
+            .collect();
+
+            let res = Command::new("mysqldump").args(args).output().await?;
+            if !res.status.success() {
+                bail!("mysqldump failed: {}", String::from_utf8_lossy(&res.stderr));
+            }
+
+            let schema = String::from_utf8_lossy(&res.stdout);
+
+            let re = Regex::new(r"^/\*![0-9]{5}.*\*/").unwrap();
+
+            let mut final_schema: String = "".to_string();
+
+            for line in schema.lines() {
+                if !re.is_match(&line) {
+                    final_schema.push_str(line);
+                    final_schema.push_str("\n");
+                }
+            }
+
+            utils::write_to_schema_file(final_schema).await?;
+
+            Ok(())
         };
 
         Box::pin(fut)

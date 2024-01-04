@@ -853,6 +853,7 @@ dependencies = [
  "libsql-client",
  "log",
  "mockall",
+ "regex",
  "serde",
  "serde_json",
  "serial_test",
