@@ -18,10 +18,6 @@ inputs:
     required: false
 runs:
   using: docker
-  image: ghcr.io/emilpriver/geni:latest
-  args:
-    - run
-    - up
   env:
     DATABASE_MIGRATIONS_FOLDER: ${{ inputs.migrations_folder }}
     DATABASE_URL: ${{ inputs.database_url }}
@@ -29,3 +25,7 @@ runs:
     DATABASE_WAIT_TIMEOUT: ${{inputs.wait_timeout}}
     DATABASE_NO_DUMP_SCHEMA: "false"
     DATABASE_MIGRATIONS_TABLE: ${{inputs.migrations_table}}
+  steps:
+    - name: Migrate using Geni
+      run: actions.sh
+      shell: bash
