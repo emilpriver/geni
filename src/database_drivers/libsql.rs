@@ -2,10 +2,10 @@ use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use libsql_client::{de, Client, Config, Statement};
-use std::future::Future;
 use std::pin::Pin;
+use std::{future::Future, task::Wake};
 
-use super::SchemaMigration;
+use super::{utils, SchemaMigration};
 
 pub struct LibSQLDriver {
     db: Client,
@@ -149,7 +149,36 @@ impl DatabaseDriver for LibSQLDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            bail!("Geni does not support dumping a database, it should be done via the respective interface")
+            let res = self
+                .db
+                .execute("SELECT sql FROM sqlite_master WHERE type='table'")
+                .await?;
+
+            let final_schema = res
+                .rows
+                .iter()
+                .map(|row| {
+                    row.values
+                        .iter()
+                        .map(|v| {
+                            let m = v
+                                .to_string()
+                                .trim_start_matches('"')
+                                .trim_end_matches('"')
+                                .to_string()
+                                .replace("\\n", "\n");
+
+                            format!("{};", m)
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                })
+                .collect::<Vec<String>>()
+                .join("\n");
+
+            utils::write_to_schema_file(final_schema).await?;
+
+            Ok(())
         };
 
         Box::pin(fut)

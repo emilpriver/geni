@@ -6,7 +6,7 @@ use std::fs::{self, File};
 use std::future::Future;
 use std::pin::Pin;
 
-use super::SchemaMigration;
+use super::{utils, SchemaMigration};
 
 pub struct SqliteDriver {
     db: Client,
@@ -146,7 +146,34 @@ impl DatabaseDriver for SqliteDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            bail!("Geni does not support dumping a database, it should be done via the respective interface")
+            let res = self
+                .db
+                .execute("SELECT sql FROM sqlite_master WHERE type='table'")?;
+            let final_schema = res
+                .rows
+                .iter()
+                .map(|row| {
+                    row.values
+                        .iter()
+                        .map(|v| {
+                            let m = v
+                                .to_string()
+                                .trim_start_matches('"')
+                                .trim_end_matches('"')
+                                .to_string()
+                                .replace("\\n", "\n");
+
+                            format!("{};", m)
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                })
+                .collect::<Vec<String>>()
+                .join("\n");
+
+            utils::write_to_schema_file(final_schema).await?;
+
+            Ok(())
         };
 
         Box::pin(fut)
