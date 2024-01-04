@@ -11,6 +11,7 @@ mod tests {
     use chrono::Utc;
     use std::fs;
     use std::io::Write;
+    use std::path::Path;
     use std::{env, fs::File, vec};
     use tokio::test;
 
@@ -135,6 +136,11 @@ mod tests {
                 .unwrap()
                 .len(),
             2
+        );
+
+        assert_eq!(
+            true,
+            Path::new(&format!("{}/schema.sql", migration_folder_string)).exists()
         );
 
         Ok(())
