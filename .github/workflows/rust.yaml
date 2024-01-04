@@ -144,17 +144,3 @@ jobs:
       - name: Publish version
         run: |
           cargo release --execute --no-push --no-tag --no-confirm ${VERSION}
-  test-github-actions:
-    needs: [build-and-release]
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Databases
-      run: docker compose up -d
-    - name: create test migrations
-      run: bash scripts/test-migrations.sh
-    - name: Test migrations
-      uses: emilpriver/geni@ci-test-2
-      with:
-        database_url: "mariadb://root:password@localhost:3307/app"
