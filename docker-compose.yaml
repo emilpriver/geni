@@ -14,7 +14,7 @@ services:
     ports:
       - "6000:8080"
   mysql:
-    image: mysql:8.2.0
+    image: mysql:latest
     environment:
       - MYSQL_DATABASE=development
       - MYSQL_PASSWORD=password

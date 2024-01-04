@@ -194,10 +194,12 @@ impl DatabaseDriver for PostgresDriver {
                 "--no-privileges",
                 "--format=plain",
                 connection_string.as_str(),
-            ].to_vec();
+            ]
+            .to_vec();
 
             let res = Command::new("pg_dump").args(args).output().await?;
             if !res.status.success() {
+                println!("{}", String::from_utf8_lossy(&res.stderr));
                 bail!("pg_dump failed: {}", String::from_utf8_lossy(&res.stderr));
             }
 

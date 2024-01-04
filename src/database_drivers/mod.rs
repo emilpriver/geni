@@ -86,6 +86,7 @@ pub async fn new(
             Ok(Box::new(driver))
         }
         "postgres" | "psql" | "postgresql" => {
+            parsed_db_url.set_scheme("postgresql").unwrap();
             let driver =
                 postgres::PostgresDriver::new(parsed_db_url.as_str(), database_name).await?;
             Ok(Box::new(driver))

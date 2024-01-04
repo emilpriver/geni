@@ -183,7 +183,7 @@ impl DatabaseDriver for MariaDBDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            if let Err(_err) = which::which("mysqldump") {
+            if let Err(_err) = which::which("mariadb-dump") {
                 bail!("mysqldump not found in PATH, is i installed?");
             };
 
@@ -205,8 +205,9 @@ impl DatabaseDriver for MariaDBDriver {
             ]
             .to_vec();
 
-            let res = Command::new("mysqldump").args(args).output().await?;
+            let res = Command::new("mariadb-dump").args(args).output().await?;
             if !res.status.success() {
+                println!("{}", String::from_utf8_lossy(&res.stderr));
                 bail!("mysqldump failed: {}", String::from_utf8_lossy(&res.stderr));
             }
 

@@ -138,10 +138,15 @@ mod tests {
             2
         );
 
-        assert_eq!(
-            true,
-            Path::new(&format!("{}/schema.sql", migration_folder_string)).exists()
-        );
+        let paths = fs::read_dir(migration_folder_string).unwrap();
+
+        for path in paths {
+            println!("Name: {}", path.unwrap().path().display())
+        }
+
+        let schema_dump_file = format!("{}/schema.sql", migration_folder_string);
+        println!("schema_dump_file: {}", schema_dump_file);
+        assert_eq!(true, Path::new(&schema_dump_file).exists());
 
         Ok(())
     }
