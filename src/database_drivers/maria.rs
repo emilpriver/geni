@@ -218,7 +218,7 @@ impl DatabaseDriver for MariaDBDriver {
                 String::new(),
                 |mut acc, line| {
                     acc.push_str(line);
-                    acc.push_str("\n");
+                    acc.push('\n');
                     acc
                 },
             );
