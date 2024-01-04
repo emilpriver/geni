@@ -35,6 +35,16 @@ pub fn wait_timeout() -> usize {
     30
 }
 
+pub fn dump_schema_file() -> bool {
+    if let Ok(v) = env::var("DATABASE_NO_DUMP_SCHEMA") {
+        if v == "true" {
+            return false;
+        }
+    }
+
+    true
+}
+
 pub fn schema_file() -> String {
     if let Ok(v) = env::var("DATABASE_SCHEMA_FILE") {
         return v;

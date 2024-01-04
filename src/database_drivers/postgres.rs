@@ -180,8 +180,8 @@ impl DatabaseDriver for PostgresDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            if let Err(err) = which::which("pg_dump") {
-                bail!("mariadb-dump not found in PATH, is i installed? {}", err);
+            if let Err(_) = which::which("pg_dump") {
+                bail!("pg_dump not found in PATH, is i installed?");
             };
 
             let connection_string = format!("--dbname={}", self.url);

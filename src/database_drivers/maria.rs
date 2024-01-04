@@ -184,7 +184,7 @@ impl DatabaseDriver for MariaDBDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             if let Err(err) = which::which("mysqldump") {
-                bail!("mariadb-dump not found in PATH, is i installed? {}", err);
+                bail!("mysqldump not found in PATH, is i installed?");
             };
 
             let host = format!("--host={}", self.url_path.host_str().unwrap());
@@ -216,14 +216,17 @@ impl DatabaseDriver for MariaDBDriver {
 
             let re = Regex::new(r"^/\*![0-9]{5}.*\*/").unwrap();
 
-            let mut final_schema: String = "".to_string();
-
-            for line in schema.lines() {
-                if !re.is_match(&line) {
-                    final_schema.push_str(line);
-                    final_schema.push_str("\n");
-                }
-            }
+            let final_schema: String = schema
+                .lines()
+                .filter_map(|line| {
+                    if !re.is_match(&line) {
+                        Some(line)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<&str>>()
+                .join("\n");
 
             utils::write_to_schema_file(final_schema).await?;
 

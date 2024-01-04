@@ -183,8 +183,8 @@ impl DatabaseDriver for MySQLDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            if let Err(err) = which::which("mysqldump") {
-                bail!("mariadb-dump not found in PATH, is i installed? {}", err);
+            if let Err(_) = which::which("mysqldump") {
+                bail!("mysqldump not found in PATH, is i installed?");
             };
 
             let host = format!("--host={}", self.url_path.host_str().unwrap());
