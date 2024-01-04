@@ -19,7 +19,7 @@ jobs:
     - name: Setup
       run: |
         sudo apt-get update
-        sudo apt-get install -y mariadb-client postgresql-client postgresql-client-common libpq-dev
+        sudo apt-get install -y mariadb-client postgresql-client
     - name: Databases
       run: docker compose up -d
     - name: Run tests
