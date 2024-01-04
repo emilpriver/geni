@@ -24,7 +24,7 @@ jobs:
       run: docker compose up -d
     - name: Run tests
       run: cargo test --verbose
-  build-and-releas:
+  build-and-release:
     name: build and release docker
     needs: [test]
     runs-on: ubuntu-latest
@@ -53,3 +53,15 @@ jobs:
         run: |
           docker tag ghcr.io/${{ github.repository }}:${{ github.ref_name }} ghcr.io/${{ github.repository }}:latest
           docker push ghcr.io/${{ github.repository }}:latest
+  test-github-actions:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Databases
+      run: docker compose up -d
+    - name: create test migrations
+      run: bash scripts/test-migrations.sh
+    - name: Test migrations
+      uses: actions/migrate
+      secrets:
+        database_url: "mariadb://root:password@localhost:3307/app"
