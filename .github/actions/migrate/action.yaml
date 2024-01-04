@@ -17,7 +17,7 @@ inputs:
     default: ""
     required: false
 runs:
-  using: docker
+  using: composite 
   env:
     DATABASE_MIGRATIONS_FOLDER: ${{ inputs.migrations_folder }}
     DATABASE_URL: ${{ inputs.database_url }}
