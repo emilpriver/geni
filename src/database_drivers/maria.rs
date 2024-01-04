@@ -214,12 +214,14 @@ impl DatabaseDriver for MariaDBDriver {
 
             let re = Regex::new(r"^/\*![0-9]{5}.*\*/").unwrap();
 
-            let final_schema: String = schema
-                .lines()
-                .filter(|line| !re.is_match(line))
-                .into_iter()
-                .map(|line| format!("{}\n", line))
-                .collect();
+            let final_schema: String = schema.lines().filter(|line| !re.is_match(line)).fold(
+                String::new(),
+                |mut acc, line| {
+                    acc.push_str(line);
+                    acc.push_str("\n");
+                    acc
+                },
+            );
 
             utils::write_to_schema_file(final_schema).await?;
 
