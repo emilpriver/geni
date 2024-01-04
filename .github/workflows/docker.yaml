@@ -64,5 +64,5 @@ jobs:
       run: bash scripts/test-migrations.sh
     - name: Test migrations
       uses: actions/migrate@latest
-      secrets:
+      with:
         database_url: "mariadb://root:password@localhost:3307/app"
