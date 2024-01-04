@@ -180,7 +180,7 @@ impl DatabaseDriver for PostgresDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            if let Err(_) = which::which("pg_dump") {
+            if which::which("pg_dump").is_err() {
                 bail!("pg_dump not found in PATH, is i installed?");
             };
 
@@ -194,10 +194,7 @@ impl DatabaseDriver for PostgresDriver {
                 "--no-privileges",
                 "--format=plain",
                 connection_string.as_str(),
-            ]
-            .iter()
-            .map(|s| *s)
-            .collect();
+            ].to_vec();
 
             let res = Command::new("pg_dump").args(args).output().await?;
             if !res.status.success() {

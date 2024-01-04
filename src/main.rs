@@ -111,19 +111,16 @@ async fn main() {
         Some(("status", query_matches)) => {
             let verbose = query_matches.contains_id("verbose");
 
-            match status::status(verbose).await {
-                Err(err) => {
-                    error!("{:?}", err)
-                }
-                Ok(_) => {}
-            };
+            if let Err(err) = status::status(verbose).await {
+                error!("{:?}", err)
+            }
         }
         Some(("dump", ..)) => {
             match dump::dump().await {
                 Err(err) => {
                     error!("{:?}", err)
                 }
-                Ok(_) => {}
+                Ok(_) => info!("Success"),
             };
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable

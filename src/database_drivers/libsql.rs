@@ -3,7 +3,7 @@ use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use libsql_client::{de, Client, Config, Statement};
 use std::pin::Pin;
-use std::{future::Future, task::Wake};
+use std::{future::Future};
 
 use super::{utils, SchemaMigration};
 
@@ -34,9 +34,9 @@ impl DatabaseDriver for LibSQLDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             let queries = query
-                .split(";")
+                .split(';')
                 .filter(|x| !x.trim().is_empty())
-                .map(|x| Statement::new(x))
+                .map(Statement::new)
                 .collect::<Vec<Statement>>();
 
             self.db.batch(queries).await?;

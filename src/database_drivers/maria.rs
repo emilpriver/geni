@@ -183,7 +183,7 @@ impl DatabaseDriver for MariaDBDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            if let Err(err) = which::which("mysqldump") {
+            if let Err(_err) = which::which("mysqldump") {
                 bail!("mysqldump not found in PATH, is i installed?");
             };
 
@@ -203,9 +203,7 @@ impl DatabaseDriver for MariaDBDriver {
                 password.as_str(),
                 self.db_name.as_str(),
             ]
-            .iter()
-            .map(|s| *s)
-            .collect();
+            .to_vec();
 
             let res = Command::new("mysqldump").args(args).output().await?;
             if !res.status.success() {
@@ -218,15 +216,10 @@ impl DatabaseDriver for MariaDBDriver {
 
             let final_schema: String = schema
                 .lines()
-                .filter_map(|line| {
-                    if !re.is_match(&line) {
-                        Some(line)
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<&str>>()
-                .join("\n");
+                .filter(|line| !re.is_match(line))
+                .into_iter()
+                .map(|line| format!("{}\n", line))
+                .collect();
 
             utils::write_to_schema_file(final_schema).await?;
 

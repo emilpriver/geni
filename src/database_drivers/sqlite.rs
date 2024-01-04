@@ -1,6 +1,6 @@
 use crate::config;
 use crate::database_drivers::DatabaseDriver;
-use anyhow::{bail, Result};
+use anyhow::{Result};
 use libsql_client::{de, local::Client};
 use std::fs::{self, File};
 use std::future::Future;
@@ -41,7 +41,7 @@ impl DatabaseDriver for SqliteDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             let queries = query
-                .split(";")
+                .split(';')
                 .map(|x| x.trim())
                 .filter(|x| !x.is_empty())
                 .collect::<Vec<&str>>();
