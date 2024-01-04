@@ -11,6 +11,8 @@ COPY --from=builder /usr/src/app/geni /usr/src/app/geni
 
 RUN apt-get update && apt-get install -y mariadb-client postgresql-client
 
+ENV DATABASE_MIGRATIONS_FOLDER="/migrations"
+
 WORKDIR /usr/src/app
 
 ENTRYPOINT ["./geni"]
