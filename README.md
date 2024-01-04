@@ -1,5 +1,5 @@
 # Geni
-
+LibSQL
 Geni is a standalone migration tool designed to work in conjunction with your preferred ORM/toolkit/code. It allows multiple developers to collaborate without overriding database migrations. It can be used in a CD pipeline alongside your code to ensure your database stays up to date.
 
 This project was heavily inspired by [dbmate](https://github.com/amacneil/dbmate) and was created because dbmate lacked support for LibSQL.
@@ -24,9 +24,9 @@ The application is developed using the Rust programming language and relies on t
 - Status command to see which migrations that is pending to be applied 
 - Dump a schema.sql after each migration which can be used in version control
   - Dumping needs another binaries to work:
-    - Postgres: pg_dump need to be installed(already instead in docker)
-    - MySQL: mysqldump need to be installed(already instead in docker)
-    - MariaDB: mariadb-dump need to be installed(already instead in docker)
+    - Postgres: `pg_dump` need to be installed(already instead in docker)
+    - MySQL: `mysqldump` need to be installed(already instead in docker)
+    - MariaDB: `mariadb-dump` need to be installed(already instead in docker)
     - Sqlite: Works without need for another binary. Uses SQL code get schema
     - LibSQL: Works without need for another binary. Uses SQL code get schema
 
