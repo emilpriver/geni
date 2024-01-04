@@ -17,15 +17,15 @@ inputs:
     default: ""
     required: false
 runs:
-  using: composite 
-  env:
-    DATABASE_MIGRATIONS_FOLDER: ${{ inputs.migrations_folder }}
-    DATABASE_URL: ${{ inputs.database_url }}
-    DATABASE_TOKEN: ${{inputs.database_token}}
-    DATABASE_WAIT_TIMEOUT: ${{inputs.wait_timeout}}
-    DATABASE_NO_DUMP_SCHEMA: "false"
-    DATABASE_MIGRATIONS_TABLE: ${{inputs.migrations_table}}
+  using: "composite"
   steps:
     - name: Migrate using Geni
       run: actions.sh
       shell: bash
+      env:
+          DATABASE_MIGRATIONS_FOLDER: ${{ inputs.migrations_folder }}
+          DATABASE_URL: ${{ inputs.database_url }}
+          DATABASE_TOKEN: ${{inputs.database_token}}
+          DATABASE_WAIT_TIMEOUT: ${{inputs.wait_timeout}}
+          DATABASE_NO_DUMP_SCHEMA: "false"
+          DATABASE_MIGRATIONS_TABLE: ${{inputs.migrations_table}}
