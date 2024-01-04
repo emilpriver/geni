@@ -21,9 +21,7 @@
     - Default: 30
   - `migrations_table`(optional): The name of the migrations table
     - Default: `schema_migrations`
-
-###  Secrets
   - database_url(required): The url for accessing your database
   - database_token(optional): The token used to authenticate towards Turso. Only needed if you need to authenticate yourself
-    - Default: "" 
+    - Default: ""
 

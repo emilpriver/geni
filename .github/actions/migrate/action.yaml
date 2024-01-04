@@ -11,14 +11,11 @@ inputs:
   migrations_table:
     required: false
     default: ""
-
-secrets:
   database_url:
     required: true
   database_token:
     default: ""
     required: false
-
 runs:
   using: docker
   image: ghcr.io/emilpriver/geni:latest
@@ -27,8 +24,8 @@ runs:
     - up
   env:
     DATABASE_MIGRATIONS_FOLDER: ${{ inputs.migrations_folder }}
-    DATABASE_URL: ${{ secrets.database_url }}
-    DATABASE_TOKEN: ${{secrets.database_token}}
+    DATABASE_URL: ${{ inputs.database_url }}
+    DATABASE_TOKEN: ${{inputs.database_token}}
     DATABASE_WAIT_TIMEOUT: ${{inputs.wait_timeout}}
     DATABASE_NO_DUMP_SCHEMA: "false"
     DATABASE_MIGRATIONS_TABLE: ${{inputs.migrations_table}}
