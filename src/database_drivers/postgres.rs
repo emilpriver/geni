@@ -199,7 +199,6 @@ impl DatabaseDriver for PostgresDriver {
 
             let res = Command::new("pg_dump").args(args).output().await?;
             if !res.status.success() {
-                println!("{}", String::from_utf8_lossy(&res.stderr));
                 bail!("pg_dump failed: {}", String::from_utf8_lossy(&res.stderr));
             }
 

@@ -207,7 +207,6 @@ impl DatabaseDriver for MariaDBDriver {
 
             let res = Command::new("mariadb-dump").args(args).output().await?;
             if !res.status.success() {
-                println!("{}", String::from_utf8_lossy(&res.stderr));
                 bail!("mysqldump failed: {}", String::from_utf8_lossy(&res.stderr));
             }
 
