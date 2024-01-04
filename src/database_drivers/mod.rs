@@ -49,6 +49,11 @@ pub trait DatabaseDriver {
 
     // create database with the specific driver
     fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
+
+    // dump the database
+    fn dump_database_schema(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 }
 
 // Creates a new database driver based on the database_url
@@ -59,7 +64,7 @@ pub async fn new(
     let mut parsed_db_url = url::Url::parse(db_url)?;
 
     let cloned_db_url = parsed_db_url.clone();
-    let mut database_name = cloned_db_url.path();
+    let mut database_name = cloned_db_url.path().trim_start_matches('/');
 
     let driver = config::Database::new(parsed_db_url.scheme())?;
 
@@ -80,7 +85,8 @@ pub async fn new(
             let driver = libsql::LibSQLDriver::new(parsed_db_url.as_str(), token).await?;
             Ok(Box::new(driver))
         }
-        "postgres" | "psql" => {
+        "postgres" | "psql" | "postgresql" => {
+            parsed_db_url.set_scheme("postgresql").unwrap();
             let driver =
                 postgres::PostgresDriver::new(parsed_db_url.as_str(), database_name).await?;
             Ok(Box::new(driver))

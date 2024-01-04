@@ -106,7 +106,10 @@ geni help   # Print help message
 - `DATABASE_WAIT_TIMEOUT`
     - Time for geni to wait before trying to migrate. Useful if your database need some time to boot
     - Default: `0` seconds
-
+- `DATABASE_SCHEMA_FILE`
+  - Name of the schema migration file
+- `DATABASE_MIGRATIONS_TABLE`
+  - Name of the table to run migrations to
 ## Usage
 
 ### Creating a new migration

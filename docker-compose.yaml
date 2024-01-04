@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:14.10
     command: ["postgres", "-c", "fsync=off", "-c", "max_connections=5000", "-c", "shared_buffers=250MB"]
     environment:
       - POSTGRES_DB=development
@@ -23,7 +23,7 @@ services:
     ports:
       - '3306:3306'
   mariadb:
-    image: mariadb
+    image: mariadb:11.1.3
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: development

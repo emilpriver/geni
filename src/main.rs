@@ -4,6 +4,7 @@ use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
 mod config;
 mod database_drivers;
+mod dump;
 mod generate;
 mod integration_test;
 mod management;
@@ -55,6 +56,7 @@ async fn main() {
                         .action(ArgAction::Set)
                         .num_args(0..=1),
                 ),
+            Command::new("dump").about("Dump database structure"),
         ])
         .get_matches();
 
@@ -109,11 +111,16 @@ async fn main() {
         Some(("status", query_matches)) => {
             let verbose = query_matches.contains_id("verbose");
 
-            match status::status(verbose).await {
+            if let Err(err) = status::status(verbose).await {
+                error!("{:?}", err)
+            }
+        }
+        Some(("dump", ..)) => {
+            match dump::dump().await {
                 Err(err) => {
                     error!("{:?}", err)
                 }
-                Ok(_) => {}
+                Ok(_) => info!("Success"),
             };
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable

@@ -1,4 +1,4 @@
-use crate::config::{database_url, migration_folder};
+use crate::config::{self, database_url, migration_folder};
 use crate::database_drivers;
 use crate::utils::{get_local_migrations, read_file_content};
 use anyhow::{bail, Result};
@@ -46,6 +46,12 @@ pub async fn up() -> Result<()> {
             database.execute(&query).await?;
 
             database.insert_schema_migration(&id).await?;
+        }
+    }
+
+    if config::dump_schema_file() {
+        if let Err(err) = database.dump_database_schema().await {
+            log::error!("Skipping dumping database schema: {:?}", err);
         }
     }
 

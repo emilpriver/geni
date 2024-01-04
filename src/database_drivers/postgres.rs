@@ -7,6 +7,7 @@ use sqlx::Executor;
 use sqlx::{Connection, PgConnection, Row};
 use std::future::Future;
 use std::pin::Pin;
+use tokio::process::Command;
 
 use super::utils;
 
@@ -84,11 +85,18 @@ impl DatabaseDriver for PostgresDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
-            let query =
-                "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY)";
-            sqlx::query(query).execute(&mut self.db).await?;
-            let query = "SELECT id FROM schema_migrations ORDER BY id DESC";
-            let result: Vec<String> = sqlx::query(query)
+            let query = format!(
+                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
+                config::migrations_table()
+            );
+            sqlx::query(query.as_str()).execute(&mut self.db).await?;
+
+            let query = format!(
+                "SELECT id FROM {} ORDER BY id DESC",
+                config::migrations_table(),
+            );
+
+            let result: Vec<String> = sqlx::query(query.as_str())
                 .map(|row: PgRow| row.get("id"))
                 .fetch_all(&mut self.db)
                 .await?;
@@ -104,7 +112,11 @@ impl DatabaseDriver for PostgresDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("INSERT INTO schema_migrations (id) VALUES ($1)")
+            let query = format!(
+                "INSERT INTO {} (id) VALUES ($1)",
+                config::migrations_table()
+            );
+            sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;
@@ -119,7 +131,8 @@ impl DatabaseDriver for PostgresDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            sqlx::query("delete from schema_migrations where id = $1")
+            let query = format!("DELETE FROM {} WHERE id = $1", config::migrations_table());
+            sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
                 .await?;
@@ -157,6 +170,42 @@ impl DatabaseDriver for PostgresDriver {
     fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             sqlx::query("SELECT 1").execute(&mut self.db).await?;
+            Ok(())
+        };
+
+        Box::pin(fut)
+    }
+
+    fn dump_database_schema(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            if which::which("pg_dump").is_err() {
+                bail!("pg_dump not found in PATH, is i installed?");
+            };
+
+            let connection_string = format!("--dbname={}", self.url);
+
+            let args: Vec<&str> = [
+                "--format=plain",
+                "--encoding=UTF8",
+                "--schema-only",
+                "--no-owner",
+                "--no-privileges",
+                "--format=plain",
+                connection_string.as_str(),
+            ]
+            .to_vec();
+
+            let res = Command::new("pg_dump").args(args).output().await?;
+            if !res.status.success() {
+                bail!("pg_dump failed: {}", String::from_utf8_lossy(&res.stderr));
+            }
+
+            let schema = String::from_utf8_lossy(&res.stdout);
+
+            utils::write_to_schema_file(schema.to_string()).await?;
+
             Ok(())
         };
 

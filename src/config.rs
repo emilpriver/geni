@@ -35,6 +35,32 @@ pub fn wait_timeout() -> usize {
     30
 }
 
+pub fn dump_schema_file() -> bool {
+    if let Ok(v) = env::var("DATABASE_NO_DUMP_SCHEMA") {
+        if v == "true" {
+            return false;
+        }
+    }
+
+    true
+}
+
+pub fn schema_file() -> String {
+    if let Ok(v) = env::var("DATABASE_SCHEMA_FILE") {
+        return v;
+    }
+
+    "schema.sql".to_string()
+}
+
+pub fn migrations_table() -> String {
+    if let Ok(v) = env::var("DATABASE_MIGRATIONS_TABLE") {
+        return v;
+    }
+
+    "schema_migrations".to_string()
+}
+
 pub enum Database {
     LibSQL,
     Postgres,
@@ -48,7 +74,7 @@ impl Database {
     pub fn new(s: &str) -> Result<Database> {
         match s {
             "https" | "http" => Ok(Database::LibSQL),
-            "psql" | "postgres" => Ok(Database::Postgres),
+            "psql" | "postgres" | "postgresql" => Ok(Database::Postgres),
             "mariadb" => Ok(Database::MariaDB),
             "mysql" => Ok(Database::MySQL),
             "sqlite" | "sqlite3" => Ok(Database::SQLite),
