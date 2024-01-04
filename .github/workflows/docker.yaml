@@ -55,6 +55,7 @@ jobs:
           docker tag ghcr.io/${{ github.repository }}:${{ github.ref_name }} ghcr.io/${{ github.repository }}:latest
           docker push ghcr.io/${{ github.repository }}:latest
   test-github-actions:
+    needs: [build-and-release]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
