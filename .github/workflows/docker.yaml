@@ -63,6 +63,6 @@ jobs:
     - name: create test migrations
       run: bash scripts/test-migrations.sh
     - name: Test migrations
-      uses: actions/migrate@ci-test-3
+      uses: emilpriver/geni/migrate@ci-test-3
       with:
         database_url: "mariadb://root:password@localhost:3307/app"
