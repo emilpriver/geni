@@ -20,7 +20,7 @@ runs:
   using: "composite"
   steps:
     - name: Migrate using Geni
-      run: actions.sh
+      run: emilpriver/geni/.github/actions/migrate/actions.sh
       shell: bash
       env:
           DATABASE_MIGRATIONS_FOLDER: ${{ inputs.migrations_folder }}
