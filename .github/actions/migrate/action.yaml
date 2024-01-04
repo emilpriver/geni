@@ -1,4 +1,4 @@
-name: emilpriver/geni/migrate
+name: emilpriver/geni
 description: Migrate your migrations using geni
 
 inputs:
