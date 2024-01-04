@@ -106,5 +106,11 @@ pub async fn down(rollback_amount: &i64) -> Result<()> {
         }
     }
 
+    if config::dump_schema_file() {
+        if let Err(err) = database.dump_database_schema().await {
+            log::error!("Skipping dumping database schema: {:?}", err);
+        }
+    }
+
     Ok(())
 }
