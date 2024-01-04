@@ -22,6 +22,6 @@ jobs:
     - name: create test migrations
       run: bash scripts/test-migrations.sh
     - name: Test migrations
-      uses: emilpriver/geni@ci-test-3
+      uses: emilpriver/geni@ci-test-4
       with:
         database_url: "mariadb://root:password@localhost:3307/app"
