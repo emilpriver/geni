@@ -22,12 +22,12 @@ The application is developed using the Rust programming language and relies on t
 - Timestamp based migrations
 - Running migrations in a transaction
 - Status command to see which migrations that is pending to be applied 
+- Dump a schema.sql after each migration which can be used in version control
 
 ## TODO
 
 - [ ]  Databases
     - [ ]  ClickHouse
-- [ ]  Schema dump that can be used in version control
 
 ## Installation
 
