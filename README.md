@@ -23,6 +23,12 @@ The application is developed using the Rust programming language and relies on t
 - Running migrations in a transaction
 - Status command to see which migrations that is pending to be applied 
 - Dump a schema.sql after each migration which can be used in version control
+  - Dumping needs another binaries to work:
+    - Postgres: pg_dump need to be installed(already instead in docker)
+    - MySQL: mysqldump need to be installed(already instead in docker)
+    - MariaDB: mariadb-dump need to be installed(already instead in docker)
+    - Sqlite: Works without need for another binary. Uses SQL code get schema
+    - LibSQL: Works without need for another binary. Uses SQL code get schema
 
 ## TODO
 
