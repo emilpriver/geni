@@ -20,5 +20,7 @@ CHECKSUM=$(curl -Ls $NEW_TARBALL_URL | sha256sum | awk '{print $1}')
 sed -i "s|sha256 \".*\"|sha256 \"$CHECKSUM\"|" $FORMULA_PATH
 
 git add .
-git commit -m "Update geni to version $NEW_VERSION"
+git config --global user.email "emil@priver.dev"
+git config --global user.name "emilpriver"
+git commit -m "CI Action: Update geni to version $NEW_VERSION"
 git push origin main
