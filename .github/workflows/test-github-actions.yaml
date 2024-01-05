@@ -24,4 +24,4 @@ jobs:
     - name: Test migrations
       uses: emilpriver/geni@main
       with:
-        database_url: "mariadb://root:password@localhost:3307/app"
+        database_url: "psql://postgres:mysecretpassword@localhost:6437/app?sslmode=disable"
