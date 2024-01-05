@@ -1,5 +1,9 @@
 name: emilpriver/geni
 description: Migrate your migrations using geni
+branding:
+  icon: database
+  color: green
+author: emilpriver
 
 inputs:
   migrations_folder:
