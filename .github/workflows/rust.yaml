@@ -167,6 +167,12 @@ jobs:
       with:
         ref: 'main'
         token:  ${{ secrets.ACTIONS_GITHUB_TOKEN }}
+    - name: Apply netrc creds with direct input
+      uses: little-core-labs/netrc-creds@master
+      with:
+        machine: github.com
+        login: x-oauth-basic
+        password: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
     - name: "Set latest tag"  
       id: set-latest-tag
       run: echo "latest_tag=$(git tag | sort --version-sort | tail -n1)" >> $GITHUB_ENV
