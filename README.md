@@ -182,7 +182,6 @@ DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
     migrations_folder: "./migrations"
     wait_timeout: "30"
     migrations_table: "schema_migrations"
-  secrets:
     database_url: "https://localhost:3000"
     database_token: "X"
 ```
