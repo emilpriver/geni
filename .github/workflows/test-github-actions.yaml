@@ -25,3 +25,4 @@ jobs:
       uses: emilpriver/geni@main
       with:
         database_url: "psql://postgres:mysecretpassword@localhost:6437/development?sslmode=disable"
+        migrations_table: migrations
