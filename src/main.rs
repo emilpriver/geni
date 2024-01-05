@@ -65,7 +65,8 @@ async fn main() {
             let name = query_matches.get_one::<String>("name").unwrap();
             match generate::generate_new_migration(name) {
                 Err(err) => {
-                    error!("{:?}", err)
+                    error!("{:?}", err);
+                    std::process::exit(1);
                 }
                 Ok(_) => info!("Success"),
             };
@@ -73,7 +74,8 @@ async fn main() {
         Some(("create", ..)) => {
             match management::create().await {
                 Err(err) => {
-                    error!("{:?}", err)
+                    error!("{:?}", err);
+                    std::process::exit(1);
                 }
                 Ok(_) => info!("Success"),
             };
@@ -81,7 +83,8 @@ async fn main() {
         Some(("drop", ..)) => {
             match management::drop().await {
                 Err(err) => {
-                    error!("{:?}", err)
+                    error!("{:?}", err);
+                    std::process::exit(1);
                 }
                 Ok(_) => info!("Success"),
             };
@@ -89,7 +92,8 @@ async fn main() {
         Some(("up", ..)) => {
             match migrate::up().await {
                 Err(err) => {
-                    error!("{:?}", err)
+                    error!("{:?}", err);
+                    std::process::exit(1);
                 }
                 Ok(_) => info!("Success"),
             };
@@ -103,7 +107,8 @@ async fn main() {
 
             match migrate::down(&rollback_amount).await {
                 Err(err) => {
-                    error!("{:?}", err)
+                    error!("{:?}", err);
+                    std::process::exit(1);
                 }
                 Ok(_) => info!("Success"),
             };
@@ -112,13 +117,15 @@ async fn main() {
             let verbose = query_matches.contains_id("verbose");
 
             if let Err(err) = status::status(verbose).await {
-                error!("{:?}", err)
+                error!("{:?}", err);
+                std::process::exit(1);
             }
         }
         Some(("dump", ..)) => {
             match dump::dump().await {
                 Err(err) => {
-                    error!("{:?}", err)
+                    error!("{:?}", err);
+                    std::process::exit(1);
                 }
                 Ok(_) => info!("Success"),
             };
