@@ -3,7 +3,7 @@
 # Define variables
 REPO_URL="https://github.com/emilpriver/homebrew-geni.git"
 FORMULA_PATH="Formula/g/geni.rb"
-NEW_VERSION=$GITHUB_REF_NAME
+NEW_VERSION="v0.0.9"
 
 # Clone the repository
 git clone "$REPO_URL"
