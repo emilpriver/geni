@@ -3,7 +3,9 @@ use std::env;
 
 pub fn migration_folder() -> String {
     if let Ok(v) = env::var("DATABASE_MIGRATIONS_FOLDER") {
-        return v;
+        if !v.is_empty() {
+            return v;
+        }
     }
 
     "./migrations".to_string()
@@ -11,7 +13,9 @@ pub fn migration_folder() -> String {
 
 pub fn database_url() -> Result<String> {
     if let Ok(v) = env::var("DATABASE_URL") {
-        return Ok(v);
+        if !v.is_empty() {
+            return Ok(v);
+        }
     }
 
     bail!("missing DATABASE_URL env variable")
@@ -19,7 +23,9 @@ pub fn database_url() -> Result<String> {
 
 pub fn database_token() -> Option<String> {
     if let Ok(v) = env::var("DATABASE_TOKEN") {
-        return Some(v);
+        if !v.is_empty() {
+            return Some(v);
+        }
     }
 
     None
@@ -27,8 +33,10 @@ pub fn database_token() -> Option<String> {
 
 pub fn wait_timeout() -> usize {
     if let Ok(v) = env::var("DATABASE_WAIT_TIMEOUT") {
-        if let Ok(v) = v.parse::<usize>() {
-            return v;
+        if !v.is_empty() {
+            if let Ok(v) = v.parse::<usize>() {
+                return v;
+            }
         }
     }
 
@@ -47,7 +55,9 @@ pub fn dump_schema_file() -> bool {
 
 pub fn schema_file() -> String {
     if let Ok(v) = env::var("DATABASE_SCHEMA_FILE") {
-        return v;
+        if !v.is_empty() {
+            return v;
+        }
     }
 
     "schema.sql".to_string()
@@ -55,7 +65,9 @@ pub fn schema_file() -> String {
 
 pub fn migrations_table() -> String {
     if let Ok(v) = env::var("DATABASE_MIGRATIONS_TABLE") {
-        return v;
+        if !v.is_empty() {
+            return v;
+        }
     }
 
     "schema_migrations".to_string()
