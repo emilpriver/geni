@@ -157,4 +157,4 @@ jobs:
     - name: Test migrations
       uses: emilpriver/geni@main
       with:
-        database_url: "mariadb://root:password@localhost:3307/app"
+        database_url: "mariadb://root:password@localhost:3307/development"
