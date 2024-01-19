@@ -172,10 +172,9 @@ jobs:
         machine: github.com
         login: x-oauth-basic
         password: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
-    - name: "Set latest tag"  
-      id: set-latest-tag
-      run: echo "latest_tag=$(git tag | sort --version-sort | tail -n1)" >> $GITHUB_ENV
+    - uses: actions-ecosystem/action-get-latest-tag@v1
+      id: get-latest-tag
     - name: Update homebrew
-      if: ${{ github.ref_name == env.latest_tag }}
+      if: ${{ github.ref_name == steps.get-latest-tag.outputs.tag }}
       run: bash scripts/update-homebrew-geni-formula.sh
     
