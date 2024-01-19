@@ -142,8 +142,7 @@ jobs:
           TAG=${{ github.event.release.tag_name }}
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       - name: Publish version
-        run: |
-          cargo release --execute --no-push --no-tag --no-confirm ${VERSION}
+        run: cargo publish
   test-github-actions:
     runs-on: ubuntu-latest
     needs: [build-binary]
