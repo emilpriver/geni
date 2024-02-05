@@ -31,5 +31,5 @@ regex = "1.10.2"
 
 [dev-dependencies]
 mockall = "0.12.0"
-tempfile = "3.8.1"
+tempfile = "3.9.0"
 tempdir = "0.3.7"
