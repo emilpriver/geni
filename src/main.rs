@@ -22,6 +22,17 @@ async fn main() {
     )
     .expect("Failed to initialize logger");
 
+    let migration_path = config::migration_folder();
+    let database_url = match config::database_url() {
+        Ok(url) => url,
+        Err(..) => {
+            error!("No database url found, please set the DATABASE_URL environment variable");
+            return;
+        }
+    };
+
+    let database_token = config::database_token();
+
     let matches = Command::new("geni")
         .about(crate_description!())
         .version(format!("v{}", crate_version!()))
@@ -63,7 +74,7 @@ async fn main() {
     match matches.subcommand() {
         Some(("new", query_matches)) => {
             let name = query_matches.get_one::<String>("name").unwrap();
-            match generate::generate_new_migration(name) {
+            match generate::generate_new_migration(&migration_path, name) {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -72,7 +83,7 @@ async fn main() {
             };
         }
         Some(("create", ..)) => {
-            match management::create().await {
+            match management::create(&database_url, database_token).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -81,7 +92,7 @@ async fn main() {
             };
         }
         Some(("drop", ..)) => {
-            match management::drop().await {
+            match management::drop(&database_url, database_token).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -90,7 +101,7 @@ async fn main() {
             };
         }
         Some(("up", ..)) => {
-            match migrate::up().await {
+            match migrate::up(&migration_path, &database_url, database_token).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -105,7 +116,14 @@ async fn main() {
                 .parse::<i64>()
                 .expect("Couldn't parse amount, is it a number?");
 
-            match migrate::down(&rollback_amount).await {
+            match migrate::down(
+                &migration_path,
+                &database_url,
+                database_token,
+                &rollback_amount,
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -116,13 +134,15 @@ async fn main() {
         Some(("status", query_matches)) => {
             let verbose = query_matches.contains_id("verbose");
 
-            if let Err(err) = status::status(verbose).await {
+            if let Err(err) =
+                status::status(&migration_path, &database_url, database_token, verbose).await
+            {
                 error!("{:?}", err);
                 std::process::exit(1);
             }
         }
         Some(("dump", ..)) => {
-            match dump::dump().await {
+            match dump::dump(&database_url, database_token).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);

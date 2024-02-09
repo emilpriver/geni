@@ -2,8 +2,8 @@ use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use libsql_client::{de, Client, Config, Statement};
+use std::future::Future;
 use std::pin::Pin;
-use std::{future::Future};
 
 use super::{utils, SchemaMigration};
 
@@ -12,8 +12,8 @@ pub struct LibSQLDriver {
 }
 
 impl<'a> LibSQLDriver {
-    pub async fn new<'b>(db_url: &str, token: Option<String>) -> Result<LibSQLDriver> {
-        let mut config = Config::new(db_url)?;
+    pub async fn new<'b>(db_url: &String, token: Option<String>) -> Result<LibSQLDriver> {
+        let mut config = Config::new(db_url.as_str())?;
         if let Some(token) = token {
             config = config.with_auth_token(token);
         }

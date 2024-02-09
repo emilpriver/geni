@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use crate::config::database_url;
     use crate::config::Database;
     use crate::database_drivers;
     use log::info;
@@ -76,22 +77,21 @@ mod tests {
         Ok(())
     }
 
-    async fn test_migrate(database: Database, url: &str) -> Result<()> {
+    async fn test_migrate(database: Database, db_url: &str) -> Result<()> {
+        let url = db_url.to_string();
         let tmp_dir =
             tempdir::TempDir::new(format!("test_migrate_{}", database.as_str().unwrap()).as_str())
                 .unwrap();
         let migration_folder = tmp_dir.path();
-        let migration_folder_string = migration_folder.to_str().unwrap();
+        let migration_folder_string = migration_folder.to_str().unwrap().to_string();
 
-        env::set_var("DATABASE_WAIT_TIMEOUT", "30");
-        env::set_var("DATABASE_MIGRATIONS_FOLDER", migration_folder_string);
+        let database_wait_timeout = 30;
 
         generate_test_migrations(migration_folder_string.to_string()).unwrap();
 
-        env::set_var("DATABASE_TOKEN", "not needed");
-        env::set_var("DATABASE_URL", url);
-
-        let mut create_client = database_drivers::new(url, false).await.unwrap();
+        let mut create_client = database_drivers::new(&url, None, &database_wait_timeout, false)
+            .await
+            .unwrap();
         match database {
             // we don't need to match sqlite as sqlite driver creates the file if it doesn't exist
             Database::Postgres | Database::MySQL | Database::MariaDB => {
@@ -100,9 +100,11 @@ mod tests {
             _ => {}
         };
 
-        let mut client = database_drivers::new(url, true).await.unwrap();
+        let mut client = database_drivers::new(&url, None, &database_wait_timeout, true)
+            .await
+            .unwrap();
 
-        let u = up().await;
+        let u = up(&migration_folder_string, &url, None).await;
         assert!(u.is_ok());
 
         assert_eq!(
@@ -114,7 +116,7 @@ mod tests {
             6,
         );
 
-        let d = down(&1).await;
+        let d = down(&migration_folder_string, &url, None, &1).await;
         assert!(d.is_ok());
 
         assert_eq!(
@@ -126,7 +128,7 @@ mod tests {
             5
         );
 
-        let d = down(&3).await;
+        let d = down(&migration_folder_string, &url, None, &3).await;
         assert!(d.is_ok());
 
         assert_eq!(

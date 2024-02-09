@@ -58,7 +58,9 @@ pub trait DatabaseDriver {
 
 // Creates a new database driver based on the database_url
 pub async fn new(
-    db_url: &str,
+    db_url: &String,
+    db_token: Option<String>,
+    wait_timeout: Option<i64>,
     with_selected_database: bool,
 ) -> Result<Box<dyn DatabaseDriver>, anyhow::Error> {
     let mut parsed_db_url = url::Url::parse(db_url)?;
@@ -81,18 +83,20 @@ pub async fn new(
 
     match scheme {
         "http" | "https" => {
-            let token = config::database_token();
-            let driver = libsql::LibSQLDriver::new(parsed_db_url.as_str(), token).await?;
+            let driver = libsql::LibSQLDriver::new(&parsed_db_url.to_string(), db_token).await?;
             Ok(Box::new(driver))
         }
         "postgres" | "psql" | "postgresql" => {
             parsed_db_url.set_scheme("postgresql").unwrap();
             let driver =
-                postgres::PostgresDriver::new(parsed_db_url.as_str(), database_name).await?;
+                postgres::PostgresDriver::new(parsed_db_url.as_str(), database_name, wait_timeout)
+                    .await?;
             Ok(Box::new(driver))
         }
         "mysql" => {
-            let driver = mysql::MySQLDriver::new(parsed_db_url.as_str(), database_name).await?;
+            let driver =
+                mysql::MySQLDriver::new(parsed_db_url.as_str(), database_name, wait_timeout)
+                    .await?;
             Ok(Box::new(driver))
         }
         "sqlite" | "sqlite3" => {
@@ -100,7 +104,9 @@ pub async fn new(
             Ok(Box::new(driver))
         }
         "mariadb" => {
-            let driver = maria::MariaDBDriver::new(parsed_db_url.as_str(), database_name).await?;
+            let driver =
+                maria::MariaDBDriver::new(parsed_db_url.as_str(), database_name, wait_timeout)
+                    .await?;
             Ok(Box::new(driver))
         }
         _ => bail!("Unsupported database driver: {}", scheme),
