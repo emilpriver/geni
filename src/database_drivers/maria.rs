@@ -20,10 +20,14 @@ pub struct MariaDBDriver {
 }
 
 impl<'a> MariaDBDriver {
-    pub async fn new<'b>(db_url: &str, database_name: &str) -> Result<MariaDBDriver> {
+    pub async fn new<'b>(
+        db_url: &str,
+        database_name: &str,
+        wait_timeout: Option<usize>,
+    ) -> Result<MariaDBDriver> {
         let mut client = MySqlConnection::connect(db_url).await;
 
-        let wait_timeout = config::wait_timeout();
+        let wait_timeout = wait_timeout.unwrap_or(0);
 
         if client.is_err() {
             let mut count = 0;

@@ -3,6 +3,7 @@ use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::pin::Pin;
+use std::usize;
 
 pub mod libsql;
 pub mod maria;
@@ -60,7 +61,7 @@ pub trait DatabaseDriver {
 pub async fn new(
     db_url: &String,
     db_token: Option<String>,
-    wait_timeout: Option<i64>,
+    wait_timeout: Option<usize>,
     with_selected_database: bool,
 ) -> Result<Box<dyn DatabaseDriver>, anyhow::Error> {
     let mut parsed_db_url = url::Url::parse(db_url)?;

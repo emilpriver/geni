@@ -89,9 +89,10 @@ mod tests {
 
         generate_test_migrations(migration_folder_string.to_string()).unwrap();
 
-        let mut create_client = database_drivers::new(&url, None, &database_wait_timeout, false)
-            .await
-            .unwrap();
+        let mut create_client =
+            database_drivers::new(&url, None, Some(database_wait_timeout), false)
+                .await
+                .unwrap();
         match database {
             // we don't need to match sqlite as sqlite driver creates the file if it doesn't exist
             Database::Postgres | Database::MySQL | Database::MariaDB => {
@@ -100,11 +101,17 @@ mod tests {
             _ => {}
         };
 
-        let mut client = database_drivers::new(&url, None, &database_wait_timeout, true)
+        let mut client = database_drivers::new(&url, None, Some(database_wait_timeout), true)
             .await
             .unwrap();
 
-        let u = up(&migration_folder_string, &url, None).await;
+        let u = up(
+            &migration_folder_string,
+            &url,
+            None,
+            Some(database_wait_timeout),
+        )
+        .await;
         assert!(u.is_ok());
 
         assert_eq!(
@@ -116,7 +123,14 @@ mod tests {
             6,
         );
 
-        let d = down(&migration_folder_string, &url, None, &1).await;
+        let d = down(
+            &migration_folder_string,
+            &url,
+            None,
+            Some(database_wait_timeout),
+            &1,
+        )
+        .await;
         assert!(d.is_ok());
 
         assert_eq!(
@@ -128,7 +142,14 @@ mod tests {
             5
         );
 
-        let d = down(&migration_folder_string, &url, None, &3).await;
+        let d = down(
+            &migration_folder_string,
+            &url,
+            None,
+            Some(database_wait_timeout),
+            &3,
+        )
+        .await;
         assert!(d.is_ok());
 
         assert_eq!(

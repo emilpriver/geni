@@ -9,6 +9,7 @@ pub async fn up(
     migration_folder: &String,
     database_url: &String,
     database_token: Option<String>,
+    wait_timeout: Option<usize>,
 ) -> Result<()> {
     let path = PathBuf::from(&migration_folder);
     let files = match get_local_migrations(&path, "up") {
@@ -25,7 +26,8 @@ pub async fn up(
         );
     }
 
-    let mut database = database_drivers::new(&database_url, database_token, true).await?;
+    let mut database =
+        database_drivers::new(&database_url, database_token, wait_timeout, true).await?;
 
     let migrations: Vec<String> = database
         .get_or_create_schema_migrations()
@@ -63,6 +65,7 @@ pub async fn down(
     migration_folder: &String,
     database_url: &String,
     database_token: Option<String>,
+    wait_timeout: Option<usize>,
     rollback_amount: &i64,
 ) -> Result<()> {
     let path = PathBuf::from(&migration_folder);
@@ -80,7 +83,8 @@ pub async fn down(
         );
     }
 
-    let mut database = database_drivers::new(&database_url, database_token, true).await?;
+    let mut database =
+        database_drivers::new(&database_url, database_token, wait_timeout, true).await?;
 
     let migrations = database
         .get_or_create_schema_migrations()

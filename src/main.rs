@@ -30,6 +30,7 @@ async fn main() {
             return;
         }
     };
+    let wait_timeout = config::wait_timeout();
 
     let database_token = config::database_token();
 
@@ -83,7 +84,7 @@ async fn main() {
             };
         }
         Some(("create", ..)) => {
-            match management::create(&database_url, database_token).await {
+            match management::create(&database_url, database_token, Some(wait_timeout)).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -92,7 +93,7 @@ async fn main() {
             };
         }
         Some(("drop", ..)) => {
-            match management::drop(&database_url, database_token).await {
+            match management::drop(&database_url, database_token, Some(wait_timeout)).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -101,7 +102,14 @@ async fn main() {
             };
         }
         Some(("up", ..)) => {
-            match migrate::up(&migration_path, &database_url, database_token).await {
+            match migrate::up(
+                &migration_path,
+                &database_url,
+                database_token,
+                Some(wait_timeout),
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -120,6 +128,7 @@ async fn main() {
                 &migration_path,
                 &database_url,
                 database_token,
+                Some(wait_timeout),
                 &rollback_amount,
             )
             .await
@@ -134,15 +143,21 @@ async fn main() {
         Some(("status", query_matches)) => {
             let verbose = query_matches.contains_id("verbose");
 
-            if let Err(err) =
-                status::status(&migration_path, &database_url, database_token, verbose).await
+            if let Err(err) = status::status(
+                &migration_path,
+                &database_url,
+                database_token,
+                Some(wait_timeout),
+                verbose,
+            )
+            .await
             {
                 error!("{:?}", err);
                 std::process::exit(1);
             }
         }
         Some(("dump", ..)) => {
-            match dump::dump(&database_url, database_token).await {
+            match dump::dump(&database_url, database_token, Some(wait_timeout)).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -152,4 +167,41 @@ async fn main() {
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable
     }
+}
+
+// Revert X amount of migrations
+pub async fn migrate_up(
+    migration_path: String,
+    database_url: String,
+    database_token: Option<String>,
+    wait_timeout: Option<usize>,
+) -> anyhow::Result<()> {
+    migrate::up(&migration_path, &database_url, database_token, wait_timeout).await
+}
+
+// Revert X amount of migrations
+pub async fn migrate_down(
+    migration_path: String,
+    database_url: String,
+    database_token: Option<String>,
+    wait_timeout: Option<usize>,
+    down_migration_amount: i64,
+) -> anyhow::Result<()> {
+    migrate::down(
+        &migration_path,
+        &database_url,
+        database_token,
+        wait_timeout,
+        &down_migration_amount,
+    )
+    .await
+}
+
+// Create the database from given database_url
+pub async fn create_database(
+    database_url: String,
+    database_token: Option<String>,
+    wait_timeout: Option<usize>,
+) -> anyhow::Result<()> {
+    management::create(&database_url, database_token, wait_timeout).await
 }

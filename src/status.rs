@@ -11,9 +11,11 @@ pub async fn status(
     migration_folder: &String,
     database_url: &String,
     database_token: Option<String>,
+    wait_timeout: Option<usize>,
     verbose: bool,
 ) -> Result<()> {
-    let mut database = database_drivers::new(database_url, database_token, true).await?;
+    let mut database =
+        database_drivers::new(database_url, database_token, wait_timeout, true).await?;
 
     let path = PathBuf::from(&migration_folder);
     let files = match get_local_migrations(&path, "up") {

@@ -18,10 +18,14 @@ pub struct PostgresDriver {
 }
 
 impl<'a> PostgresDriver {
-    pub async fn new<'b>(db_url: &str, database_name: &str) -> Result<PostgresDriver> {
+    pub async fn new<'b>(
+        db_url: &str,
+        database_name: &str,
+        wait_timeout: Option<usize>,
+    ) -> Result<PostgresDriver> {
         let mut client = PgConnection::connect(db_url).await;
 
-        let wait_timeout = config::wait_timeout();
+        let wait_timeout = wait_timeout.unwrap_or(0);
 
         if client.is_err() {
             let mut count = 0;
