@@ -211,7 +211,7 @@ to make migrations.
 
 Geni can be used as a library as well.
 
-All exposed functions can be found in [./examples/library/](the library example folder)
+All exposed functions can be found in [the library example folder]( ./examples/library/)
 
 ```rust
 use geni;
