@@ -42,3 +42,51 @@ pub fn get_local_migrations(folder: &PathBuf, ending: &str) -> Result<Vec<(i64, 
 pub fn read_file_content(path: &PathBuf) -> String {
     fs::read_to_string(path).unwrap()
 }
+
+pub fn should_run_in_transaction(query: &str) -> bool {
+    let first_line = query.split_once('\n').unwrap_or(("", "")).0;
+
+    if first_line.contains("transaction: no") {
+        return false;
+    }
+
+    if first_line.contains("transaction:no") {
+        return false;
+    }
+
+    return true;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_without_transaction_no_in_first_line() {
+        let query = "something else\ntransaction: no";
+        assert_eq!(should_run_in_transaction(query), true);
+    }
+
+    #[test]
+    fn test_with_empty_line() {
+        let query = "";
+        assert_eq!(should_run_in_transaction(query), true);
+    }
+
+    #[test]
+    fn test_with_transaction_yes_in_first_line() {
+        let query = "transaction: yes\nSELECT * FROM users";
+        assert_eq!(should_run_in_transaction(query), true);
+    }
+
+    #[test]
+    fn test_with_transaction_no_in_first_line() {
+        let query = "transaction: no\nSELECT * FROM users";
+        assert_eq!(should_run_in_transaction(query), false);
+    }
+    #[test]
+    fn test_with_transaction_no_in_first_line_without_space() {
+        let query = "transaction:no\nSELECT * FROM users";
+        assert_eq!(should_run_in_transaction(query), false);
+    }
+}

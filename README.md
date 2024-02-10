@@ -146,6 +146,23 @@ DROP TABLE Persons;
 
 in the generated `.down.sql` file as this code would revert the creation of the table `Persons`
 
+### Transactions
+
+Geni defaults to always run in transactions but if you want to prevent usage of transactions, add `transaction: no` as the first line of the migration file.
+Then Geni won't use transactions for the specific migration.
+This works for both up and down
+
+Example:
+
+```sql
+-- transaction:no
+CREATE TABLE table_2 (
+  id INT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ### Running migration
 
 Running migration can be done using

@@ -1,5 +1,5 @@
-use crate::database_drivers;
 use crate::utils::{get_local_migrations, read_file_content};
+use crate::{database_drivers, utils};
 use anyhow::{bail, Result};
 use log::info;
 use std::path::PathBuf;
@@ -55,8 +55,9 @@ pub async fn up(
         if !migrations.contains(&id) {
             info!("Running migration {}", id);
             let query = read_file_content(&f.1);
+            let run_in_transaction = utils::should_run_in_transaction(&query);
 
-            database.execute(&query).await?;
+            database.execute(&query, run_in_transaction).await?;
 
             database.insert_schema_migration(&id).await?;
         }
@@ -124,8 +125,9 @@ pub async fn down(
             Some(f) => {
                 info!("Running rollback for {}", migration);
                 let query = read_file_content(&f.1);
+                let run_in_transaction = utils::should_run_in_transaction(&query);
 
-                database.execute(&query).await?;
+                database.execute(&query, run_in_transaction).await?;
 
                 database
                     .remove_schema_migration(migration.to_string().as_str())
