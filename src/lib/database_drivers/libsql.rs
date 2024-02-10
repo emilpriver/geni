@@ -44,7 +44,7 @@ impl DatabaseDriver for LibSQLDriver {
     fn execute<'a>(
         &'a mut self,
         query: &'a str,
-        _run_in_transaction: bool,
+        run_in_transaction: bool,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             let queries = query
@@ -53,7 +53,18 @@ impl DatabaseDriver for LibSQLDriver {
                 .map(Statement::new)
                 .collect::<Vec<Statement>>();
 
-            self.db.batch(queries).await?;
+            if run_in_transaction {
+                self.db.batch(queries).await?;
+            } else {
+                for query in queries {
+                    match self.db.execute(query).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            bail!("{:?}", e);
+                        }
+                    }
+                }
+            }
 
             Ok(())
         };
