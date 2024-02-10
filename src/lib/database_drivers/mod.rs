@@ -23,6 +23,7 @@ pub trait DatabaseDriver {
     fn execute<'a>(
         &'a mut self,
         query: &'a str,
+        run_in_transaction: bool,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>>;
 
     // create database with the specific driver

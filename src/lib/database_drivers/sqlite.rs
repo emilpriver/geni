@@ -1,5 +1,5 @@
 use crate::database_drivers::DatabaseDriver;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use libsql_client::{de, local::Client};
 use std::fs::{self, File};
 use std::future::Future;
@@ -48,15 +48,32 @@ impl DatabaseDriver for SqliteDriver {
     fn execute<'a>(
         &'a mut self,
         query: &'a str,
+        run_in_transaction: bool,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
+            if run_in_transaction {
+                self.db.execute("BEGIN;")?;
+            }
+
             let queries = query
                 .split(';')
                 .map(|x| x.trim())
                 .filter(|x| !x.is_empty())
                 .collect::<Vec<&str>>();
             for query in queries {
-                self.db.execute(query)?;
+                match self.db.execute(query) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if run_in_transaction {
+                            self.db.execute("ROLLBACK;")?;
+                        }
+                        bail!("{:?}", e);
+                    }
+                }
+            }
+
+            if run_in_transaction {
+                self.db.execute("COMMIT;")?;
             }
             Ok(())
         };

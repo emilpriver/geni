@@ -55,8 +55,14 @@ pub async fn up(
         if !migrations.contains(&id) {
             info!("Running migration {}", id);
             let query = read_file_content(&f.1);
+            let run_in_transaction = query
+                .split_once('\n')
+                // by default do we want to run in a transaction
+                .unwrap_or(("transaction: yes", ""))
+                .0
+                .contains("transaction: yes");
 
-            database.execute(&query).await?;
+            database.execute(&query, run_in_transaction).await?;
 
             database.insert_schema_migration(&id).await?;
         }
@@ -124,8 +130,14 @@ pub async fn down(
             Some(f) => {
                 info!("Running rollback for {}", migration);
                 let query = read_file_content(&f.1);
+                let run_in_transaction = query
+                    .split_once('\n')
+                    // by default do we want to run in a transaction
+                    .unwrap_or(("transaction: yes", ""))
+                    .0
+                    .contains("transaction: yes");
 
-                database.execute(&query).await?;
+                database.execute(&query, run_in_transaction).await?;
 
                 database
                     .remove_schema_migration(migration.to_string().as_str())

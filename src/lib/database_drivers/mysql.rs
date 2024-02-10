@@ -78,18 +78,23 @@ impl DatabaseDriver for MySQLDriver {
     fn execute<'a>(
         &'a mut self,
         query: &'a str,
+        run_in_transaction: bool,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let mut tx = self.db.begin().await?;
-
-            match tx.execute(query).await {
-                Ok(_) => {
-                    tx.commit().await?;
+            if run_in_transaction {
+                let mut tx = self.db.begin().await?;
+                match tx.execute(query).await {
+                    Ok(_) => {
+                        tx.commit().await?;
+                    }
+                    Err(e) => {
+                        error!("Error executing query: {}", e);
+                        tx.rollback().await?;
+                    }
                 }
-                Err(e) => {
-                    error!("Error executing query: {}", e);
-                    tx.rollback().await?;
-                }
+                return Ok(());
+            } else {
+                self.db.execute(query).await?;
             }
 
             Ok(())

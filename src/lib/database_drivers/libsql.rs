@@ -44,6 +44,7 @@ impl DatabaseDriver for LibSQLDriver {
     fn execute<'a>(
         &'a mut self,
         query: &'a str,
+        _run_in_transaction: bool,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             let queries = query
