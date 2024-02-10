@@ -1,4 +1,3 @@
-use crate::config;
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
 use log::{error, info};
@@ -17,6 +16,9 @@ pub struct MariaDBDriver {
     url: String,
     url_path: url::Url,
     db_name: String,
+    migrations_table: String,
+    migrations_folder: String,
+    schema_file: String,
 }
 
 impl<'a> MariaDBDriver {
@@ -24,6 +26,9 @@ impl<'a> MariaDBDriver {
         db_url: &str,
         database_name: &str,
         wait_timeout: Option<usize>,
+        migrations_table: String,
+        migrations_folder: String,
+        schema_file: String,
     ) -> Result<MariaDBDriver> {
         let mut client = MySqlConnection::connect(db_url).await;
 
@@ -56,14 +61,15 @@ impl<'a> MariaDBDriver {
             url_path.set_host(Some("127.0.0.1"))?;
         }
 
-        let mut m = MariaDBDriver {
+        let m = MariaDBDriver {
             db: client.unwrap(),
             url: db_url.to_string(),
             db_name: database_name.to_string(),
             url_path,
+            migrations_folder,
+            migrations_table,
+            schema_file,
         };
-
-        utils::wait_for_database(&mut m).await?;
 
         Ok(m)
     }
@@ -99,13 +105,10 @@ impl DatabaseDriver for MariaDBDriver {
         let fut = async move {
             let query = format!(
                 "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
-                config::migrations_table()
+                self.migrations_table,
             );
             sqlx::query(query.as_str()).execute(&mut self.db).await?;
-            let query = format!(
-                "SELECT id FROM {} ORDER BY id DESC",
-                config::migrations_table()
-            );
+            let query = format!("SELECT id FROM {} ORDER BY id DESC", self.migrations_table);
             let result: Vec<String> = sqlx::query(query.as_str())
                 .map(|row: MySqlRow| row.get("id"))
                 .fetch_all(&mut self.db)
@@ -122,7 +125,7 @@ impl DatabaseDriver for MariaDBDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = format!("INSERT INTO {} (id) VALUES (?)", config::migrations_table());
+            let query = format!("INSERT INTO {} (id) VALUES (?)", self.migrations_table);
             sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
@@ -138,7 +141,7 @@ impl DatabaseDriver for MariaDBDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = format!("DELETE FROM {} WHERE id = ?", config::migrations_table());
+            let query = format!("DELETE FROM {} WHERE id = ?", self.migrations_table);
             sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
@@ -227,7 +230,12 @@ impl DatabaseDriver for MariaDBDriver {
                 },
             );
 
-            utils::write_to_schema_file(final_schema).await?;
+            utils::write_to_schema_file(
+                final_schema,
+                self.migrations_folder.clone(),
+                self.schema_file.clone(),
+            )
+            .await?;
 
             Ok(())
         };

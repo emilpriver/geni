@@ -6,10 +6,13 @@ use log::info;
 use std::path::PathBuf;
 
 pub async fn up(
-    migration_folder: &String,
-    database_url: &String,
+    database_url: String,
     database_token: Option<String>,
+    migration_table: String,
+    migration_folder: String,
+    schema_file: String,
     wait_timeout: Option<usize>,
+    dump_schema: bool,
 ) -> Result<()> {
     let path = PathBuf::from(&migration_folder);
     let files = match get_local_migrations(&path, "up") {
@@ -26,8 +29,16 @@ pub async fn up(
         );
     }
 
-    let mut database =
-        database_drivers::new(&database_url, database_token, wait_timeout, true).await?;
+    let mut database = database_drivers::new(
+        database_url,
+        database_token,
+        migration_table,
+        migration_folder.clone(),
+        schema_file,
+        wait_timeout,
+        true,
+    )
+    .await?;
 
     let migrations: Vec<String> = database
         .get_or_create_schema_migrations()
@@ -52,7 +63,7 @@ pub async fn up(
         }
     }
 
-    if config::dump_schema_file() {
+    if dump_schema {
         if let Err(err) = database.dump_database_schema().await {
             log::error!("Skipping dumping database schema: {:?}", err);
         }
@@ -62,10 +73,13 @@ pub async fn up(
 }
 
 pub async fn down(
-    migration_folder: &String,
-    database_url: &String,
+    database_url: String,
     database_token: Option<String>,
+    migration_table: String,
+    migration_folder: String,
+    schema_file: String,
     wait_timeout: Option<usize>,
+    dump_schema: bool,
     rollback_amount: &i64,
 ) -> Result<()> {
     let path = PathBuf::from(&migration_folder);
@@ -83,8 +97,16 @@ pub async fn down(
         );
     }
 
-    let mut database =
-        database_drivers::new(&database_url, database_token, wait_timeout, true).await?;
+    let mut database = database_drivers::new(
+        database_url,
+        database_token,
+        migration_table,
+        migration_folder.clone(),
+        schema_file,
+        wait_timeout,
+        true,
+    )
+    .await?;
 
     let migrations = database
         .get_or_create_schema_migrations()
@@ -113,7 +135,7 @@ pub async fn down(
         }
     }
 
-    if config::dump_schema_file() {
+    if dump_schema {
         if let Err(err) = database.dump_database_schema().await {
             log::error!("Skipping dumping database schema: {:?}", err);
         }

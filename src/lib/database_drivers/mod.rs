@@ -59,12 +59,15 @@ pub trait DatabaseDriver {
 
 // Creates a new database driver based on the database_url
 pub async fn new(
-    db_url: &String,
+    db_url: String,
     db_token: Option<String>,
+    migrations_table: String,
+    migrations_folder: String,
+    schema_file: String,
     wait_timeout: Option<usize>,
     with_selected_database: bool,
 ) -> Result<Box<dyn DatabaseDriver>, anyhow::Error> {
-    let mut parsed_db_url = url::Url::parse(db_url)?;
+    let mut parsed_db_url = url::Url::parse(&db_url)?;
 
     let cloned_db_url = parsed_db_url.clone();
     let mut database_name = cloned_db_url.path().trim_start_matches('/');
@@ -84,30 +87,61 @@ pub async fn new(
 
     match scheme {
         "http" | "https" => {
-            let driver = libsql::LibSQLDriver::new(&parsed_db_url.to_string(), db_token).await?;
+            let driver = libsql::LibSQLDriver::new(
+                &parsed_db_url.to_string(),
+                db_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+            )
+            .await?;
             Ok(Box::new(driver))
         }
         "postgres" | "psql" | "postgresql" => {
             parsed_db_url.set_scheme("postgresql").unwrap();
-            let driver =
-                postgres::PostgresDriver::new(parsed_db_url.as_str(), database_name, wait_timeout)
-                    .await?;
+            let driver = postgres::PostgresDriver::new(
+                parsed_db_url.as_str(),
+                database_name,
+                wait_timeout,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+            )
+            .await?;
             Ok(Box::new(driver))
         }
         "mysql" => {
-            let driver =
-                mysql::MySQLDriver::new(parsed_db_url.as_str(), database_name, wait_timeout)
-                    .await?;
+            let driver = mysql::MySQLDriver::new(
+                parsed_db_url.as_str(),
+                database_name,
+                wait_timeout,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+            )
+            .await?;
             Ok(Box::new(driver))
         }
         "sqlite" | "sqlite3" => {
-            let driver = sqlite::SqliteDriver::new(db_url).await?;
+            let driver = sqlite::SqliteDriver::new(
+                &db_url,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+            )
+            .await?;
             Ok(Box::new(driver))
         }
         "mariadb" => {
-            let driver =
-                maria::MariaDBDriver::new(parsed_db_url.as_str(), database_name, wait_timeout)
-                    .await?;
+            let driver = maria::MariaDBDriver::new(
+                parsed_db_url.as_str(),
+                database_name,
+                wait_timeout,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+            )
+            .await?;
             Ok(Box::new(driver))
         }
         _ => bail!("Unsupported database driver: {}", scheme),

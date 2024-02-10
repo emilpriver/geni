@@ -1,0 +1,8 @@
+/target
+/migrations
+.go-tetris.log
+.envrc
+test.sqlite
+example.db
+/tmp/
+scripts/migrations

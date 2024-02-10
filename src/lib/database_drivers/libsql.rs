@@ -1,40 +1,46 @@
-use crate::config;
 use crate::database_drivers::DatabaseDriver;
-use anyhow::{Result};
-use libsql_client::{de, local::Client};
-use std::fs::{self, File};
+use anyhow::{bail, Result};
+use libsql_client::{de, Client, Config, Statement};
 use std::future::Future;
 use std::pin::Pin;
 
 use super::{utils, SchemaMigration};
 
-pub struct SqliteDriver {
+pub struct LibSQLDriver {
     db: Client,
-    path: String,
+    migrations_table: String,
+    migrations_folder: String,
+    schema_file: String,
 }
 
-impl<'a> SqliteDriver {
-    pub async fn new<'b>(db_url: &str) -> Result<SqliteDriver> {
-        let path = std::path::Path::new(db_url.split_once("://").unwrap().1);
-
-        if File::open(path.to_str().unwrap()).is_err() {
-            if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-
-            File::create(path)?;
+impl<'a> LibSQLDriver {
+    pub async fn new<'b>(
+        db_url: &String,
+        token: Option<String>,
+        migrations_table: String,
+        migrations_folder: String,
+        schema_file: String,
+    ) -> Result<LibSQLDriver> {
+        let mut config = Config::new(db_url.as_str())?;
+        if let Some(token) = token {
+            config = config.with_auth_token(token);
         }
 
-        let client = Client::new(path.to_str().unwrap()).unwrap();
+        let client = match libsql_client::Client::from_config(config).await {
+            Ok(c) => c,
+            Err(err) => bail!("{:?}", err),
+        };
 
-        Ok(SqliteDriver {
+        Ok(LibSQLDriver {
             db: client,
-            path: path.to_str().unwrap().to_string(),
+            migrations_folder,
+            migrations_table,
+            schema_file,
         })
     }
 }
 
-impl DatabaseDriver for SqliteDriver {
+impl DatabaseDriver for LibSQLDriver {
     fn execute<'a>(
         &'a mut self,
         query: &'a str,
@@ -42,12 +48,12 @@ impl DatabaseDriver for SqliteDriver {
         let fut = async move {
             let queries = query
                 .split(';')
-                .map(|x| x.trim())
-                .filter(|x| !x.is_empty())
-                .collect::<Vec<&str>>();
-            for query in queries {
-                self.db.execute(query)?;
-            }
+                .filter(|x| !x.trim().is_empty())
+                .map(Statement::new)
+                .collect::<Vec<Statement>>();
+
+            self.db.batch(queries).await?;
+
             Ok(())
         };
 
@@ -59,17 +65,12 @@ impl DatabaseDriver for SqliteDriver {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
             let query = format!(
-                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY);",
-                config::migrations_table()
+                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) NOT NULL PRIMARY KEY);",
+                self.migrations_table,
             );
-            self.db.execute(query)?;
-
-            let query = format!(
-                "SELECT id FROM {} ORDER BY id DESC;",
-                config::migrations_table()
-            );
-
-            let result = self.db.execute(query)?;
+            self.db.execute(query).await?;
+            let query = format!("SELECT id FROM {} ORDER BY id DESC;", self.migrations_table);
+            let result = self.db.execute(query.as_str()).await?;
 
             let rows = result.rows.iter().map(de::from_row);
 
@@ -86,14 +87,15 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute(
-                format!(
-                    "INSERT INTO {} (id) VALUES ('{}');",
-                    config::migrations_table(),
-                    id,
+            self.db
+                .execute(
+                    format!(
+                        "INSERT INTO {} (id) VALUES ('{}');",
+                        self.migrations_table, id
+                    )
+                    .as_str(),
                 )
-                .as_str(),
-            )?;
+                .await?;
             Ok(())
         };
 
@@ -105,31 +107,32 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute(
-                format!(
-                    "DELETE FROM {} WHERE id = '{}';",
-                    config::migrations_table(),
-                    id
+            self.db
+                .execute(
+                    format!("DELETE FROM {} WHERE id = '{}';", self.migrations_table, id).as_str(),
                 )
-                .as_str(),
-            )?;
+                .await?;
             Ok(())
         };
 
         Box::pin(fut)
     }
 
-    fn create_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
-        let fut = async move { Ok(()) };
+    fn create_database(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
+        let fut = async move {
+            bail!("Geni does not support creating a database, it should be done via the respective interface")
+        };
 
         Box::pin(fut)
     }
 
-    fn drop_database(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
+    fn drop_database(
+        &mut self,
+    ) -> Pin<Box<dyn Future<Output = std::prelude::v1::Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            fs::remove_file(&mut self.path)?;
-
-            Ok(())
+            bail!("Geni does not support dropping a database, it should be done via the respective interface")
         };
 
         Box::pin(fut)
@@ -137,7 +140,11 @@ impl DatabaseDriver for SqliteDriver {
 
     // SQlite don't have a HTTP connection so we don't need to check if it's ready
     fn ready(&mut self) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
-        let fut = async move { Ok(()) };
+        let fut = async move {
+            self.db.execute("SELECT 1").await?;
+
+            Ok(())
+        };
 
         Box::pin(fut)
     }
@@ -148,7 +155,9 @@ impl DatabaseDriver for SqliteDriver {
         let fut = async move {
             let res = self
                 .db
-                .execute("SELECT sql FROM sqlite_master WHERE type='table'")?;
+                .execute("SELECT sql FROM sqlite_master WHERE type='table'")
+                .await?;
+
             let final_schema = res
                 .rows
                 .iter()
@@ -171,7 +180,12 @@ impl DatabaseDriver for SqliteDriver {
                 .collect::<Vec<String>>()
                 .join("\n");
 
-            utils::write_to_schema_file(final_schema).await?;
+            utils::write_to_schema_file(
+                final_schema,
+                self.migrations_folder.clone(),
+                self.schema_file.clone(),
+            )
+            .await?;
 
             Ok(())
         };

@@ -8,14 +8,24 @@ use anyhow::{bail, Result};
 use log::info;
 
 pub async fn status(
-    migration_folder: &String,
-    database_url: &String,
+    database_url: String,
     database_token: Option<String>,
+    migration_table: String,
+    migration_folder: String,
+    schema_file: String,
     wait_timeout: Option<usize>,
     verbose: bool,
 ) -> Result<()> {
-    let mut database =
-        database_drivers::new(database_url, database_token, wait_timeout, true).await?;
+    let mut database = database_drivers::new(
+        database_url,
+        database_token,
+        migration_table,
+        migration_folder.clone(),
+        schema_file,
+        wait_timeout,
+        true,
+    )
+    .await?;
 
     let path = PathBuf::from(&migration_folder);
     let files = match get_local_migrations(&path, "up") {

@@ -3,14 +3,6 @@ use log::{error, info};
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
 mod config;
-mod database_drivers;
-mod dump;
-mod generate;
-mod integration_test;
-mod management;
-mod migrate;
-mod status;
-mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -31,6 +23,10 @@ async fn main() {
         }
     };
     let wait_timeout = config::wait_timeout();
+    let migrations_table = config::migrations_table();
+    let migrations_folder = config::migration_folder();
+    let schema_file = config::schema_file();
+    let dump_schema = config::dump_schema_file();
 
     let database_token = config::database_token();
 
@@ -75,7 +71,7 @@ async fn main() {
     match matches.subcommand() {
         Some(("new", query_matches)) => {
             let name = query_matches.get_one::<String>("name").unwrap();
-            match generate::generate_new_migration(&migration_path, name) {
+            match geni::new_migration(migration_path, name).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -84,7 +80,16 @@ async fn main() {
             };
         }
         Some(("create", ..)) => {
-            match management::create(&database_url, database_token, Some(wait_timeout)).await {
+            match geni::create_database(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -93,7 +98,16 @@ async fn main() {
             };
         }
         Some(("drop", ..)) => {
-            match management::drop(&database_url, database_token, Some(wait_timeout)).await {
+            match geni::drop_database(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -102,11 +116,14 @@ async fn main() {
             };
         }
         Some(("up", ..)) => {
-            match migrate::up(
-                &migration_path,
-                &database_url,
+            match geni::migrate_database(
+                database_url,
                 database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
                 Some(wait_timeout),
+                dump_schema,
             )
             .await
             {
@@ -124,12 +141,15 @@ async fn main() {
                 .parse::<i64>()
                 .expect("Couldn't parse amount, is it a number?");
 
-            match migrate::down(
-                &migration_path,
-                &database_url,
+            match geni::migate_down(
+                database_url,
                 database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
                 Some(wait_timeout),
-                &rollback_amount,
+                dump_schema,
+                rollback_amount,
             )
             .await
             {
@@ -143,10 +163,12 @@ async fn main() {
         Some(("status", query_matches)) => {
             let verbose = query_matches.contains_id("verbose");
 
-            if let Err(err) = status::status(
-                &migration_path,
-                &database_url,
+            if let Err(err) = geni::status_migrations(
+                database_url,
                 database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
                 Some(wait_timeout),
                 verbose,
             )
@@ -157,7 +179,16 @@ async fn main() {
             }
         }
         Some(("dump", ..)) => {
-            match dump::dump(&database_url, database_token, Some(wait_timeout)).await {
+            match geni::dump_database(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -167,41 +198,4 @@ async fn main() {
         }
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable
     }
-}
-
-// Revert X amount of migrations
-pub async fn migrate_up(
-    migration_path: String,
-    database_url: String,
-    database_token: Option<String>,
-    wait_timeout: Option<usize>,
-) -> anyhow::Result<()> {
-    migrate::up(&migration_path, &database_url, database_token, wait_timeout).await
-}
-
-// Revert X amount of migrations
-pub async fn migrate_down(
-    migration_path: String,
-    database_url: String,
-    database_token: Option<String>,
-    wait_timeout: Option<usize>,
-    down_migration_amount: i64,
-) -> anyhow::Result<()> {
-    migrate::down(
-        &migration_path,
-        &database_url,
-        database_token,
-        wait_timeout,
-        &down_migration_amount,
-    )
-    .await
-}
-
-// Create the database from given database_url
-pub async fn create_database(
-    database_url: String,
-    database_token: Option<String>,
-    wait_timeout: Option<usize>,
-) -> anyhow::Result<()> {
-    management::create(&database_url, database_token, wait_timeout).await
 }

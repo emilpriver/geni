@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use crate::config::database_url;
     use crate::config::Database;
     use crate::database_drivers;
     use log::info;
@@ -13,7 +12,7 @@ mod tests {
     use std::fs;
     use std::io::Write;
     use std::path::Path;
-    use std::{env, fs::File, vec};
+    use std::{fs::File, vec};
     use tokio::test;
 
     fn generate_test_migrations(migration_path: String) -> Result<()> {
@@ -89,10 +88,17 @@ mod tests {
 
         generate_test_migrations(migration_folder_string.to_string()).unwrap();
 
-        let mut create_client =
-            database_drivers::new(&url, None, Some(database_wait_timeout), false)
-                .await
-                .unwrap();
+        let mut create_client = database_drivers::new(
+            url.clone(),
+            None,
+            "schema_migrations".to_string(),
+            migration_folder_string.clone(),
+            "schema.sql".to_string(),
+            Some(database_wait_timeout),
+            true,
+        )
+        .await
+        .unwrap();
         match database {
             // we don't need to match sqlite as sqlite driver creates the file if it doesn't exist
             Database::Postgres | Database::MySQL | Database::MariaDB => {
@@ -101,15 +107,26 @@ mod tests {
             _ => {}
         };
 
-        let mut client = database_drivers::new(&url, None, Some(database_wait_timeout), true)
-            .await
-            .unwrap();
+        let mut client = database_drivers::new(
+            url.clone(),
+            None,
+            "schema_migrations".to_string(),
+            migration_folder_string.clone(),
+            "schema.sql".to_string(),
+            Some(database_wait_timeout),
+            true,
+        )
+        .await
+        .unwrap();
 
         let u = up(
-            &migration_folder_string,
-            &url,
+            url.clone(),
             None,
+            "schema_migrations".to_string(),
+            migration_folder_string.clone(),
+            "schema.sql".to_string(),
             Some(database_wait_timeout),
+            true,
         )
         .await;
         assert!(u.is_ok());
@@ -124,10 +141,13 @@ mod tests {
         );
 
         let d = down(
-            &migration_folder_string,
-            &url,
+            url.clone(),
             None,
+            "schema_migrations".to_string(),
+            migration_folder_string.clone(),
+            "schema.sql".to_string(),
             Some(database_wait_timeout),
+            false,
             &1,
         )
         .await;
@@ -143,10 +163,13 @@ mod tests {
         );
 
         let d = down(
-            &migration_folder_string,
-            &url,
+            url,
             None,
+            "schema_migrations".to_string(),
+            migration_folder_string.clone(),
+            "schema.sql".to_string(),
             Some(database_wait_timeout),
+            false,
             &3,
         )
         .await;
