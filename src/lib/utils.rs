@@ -44,11 +44,17 @@ pub fn read_file_content(path: &PathBuf) -> String {
 }
 
 pub fn should_run_in_transaction(query: &str) -> bool {
-    !query
-        .split_once('\n')
-        .unwrap_or(("", ""))
-        .0
-        .contains("transaction: no")
+    let first_line = query.split_once('\n').unwrap_or(("", "")).0;
+
+    if first_line.contains("transaction: no") {
+        return false;
+    }
+
+    if first_line.contains("transaction:no") {
+        return false;
+    }
+
+    return true;
 }
 
 #[cfg(test)]
@@ -76,6 +82,11 @@ mod tests {
     #[test]
     fn test_with_transaction_no_in_first_line() {
         let query = "transaction: no\nSELECT * FROM users";
+        assert_eq!(should_run_in_transaction(query), false);
+    }
+    #[test]
+    fn test_with_transaction_no_in_first_line_without_space() {
+        let query = "transaction:no\nSELECT * FROM users";
         assert_eq!(should_run_in_transaction(query), false);
     }
 }
