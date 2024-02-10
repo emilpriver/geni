@@ -95,7 +95,7 @@ mod tests {
             migration_folder_string.clone(),
             "schema.sql".to_string(),
             Some(database_wait_timeout),
-            true,
+            false,
         )
         .await
         .unwrap();

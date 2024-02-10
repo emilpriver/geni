@@ -1,4 +1,3 @@
-use crate::config;
 use crate::database_drivers;
 use crate::utils::{get_local_migrations, read_file_content};
 use anyhow::{bail, Result};
