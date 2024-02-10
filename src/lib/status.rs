@@ -1,19 +1,33 @@
 use std::path::PathBuf;
 
 use crate::{
-    config::{database_url, migration_folder},
     database_drivers,
     utils::{get_local_migrations, read_file_content},
 };
 use anyhow::{bail, Result};
 use log::info;
 
-pub async fn status(verbose: bool) -> Result<()> {
-    let database_url = database_url()?;
-    let mut database = database_drivers::new(&database_url, true).await?;
-    let folder = migration_folder();
+pub async fn status(
+    database_url: String,
+    database_token: Option<String>,
+    migration_table: String,
+    migration_folder: String,
+    schema_file: String,
+    wait_timeout: Option<usize>,
+    verbose: bool,
+) -> Result<()> {
+    let mut database = database_drivers::new(
+        database_url,
+        database_token,
+        migration_table,
+        migration_folder.clone(),
+        schema_file,
+        wait_timeout,
+        true,
+    )
+    .await?;
 
-    let path = PathBuf::from(&folder);
+    let path = PathBuf::from(&migration_folder);
     let files = match get_local_migrations(&path, "up") {
         Ok(f) => f,
         Err(err) => {

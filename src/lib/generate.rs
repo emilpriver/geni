@@ -4,18 +4,14 @@ use log::info;
 use std::fs::{self, File};
 use std::io::Write;
 
-use crate::config::migration_folder;
-
-pub fn generate_new_migration(migration_name: &str) -> Result<()> {
+pub fn generate_new_migration(migration_folder: &String, migration_name: &str) -> Result<()> {
     let timestamp = Utc::now().timestamp();
     let name = migration_name.replace(' ', "_").to_lowercase();
 
     let file_endings = vec!["up", "down"];
 
-    let migration_path = migration_folder();
-
     for f in file_endings {
-        let filename = format!("{migration_path}/{timestamp}_{name}.{f}.sql");
+        let filename = format!("{migration_folder}/{timestamp}_{name}.{f}.sql");
         let filename_str = filename.as_str();
         let path = std::path::Path::new(filename_str);
 
@@ -38,7 +34,6 @@ pub fn generate_new_migration(migration_name: &str) -> Result<()> {
 mod tests {
 
     use super::*;
-    use std::env;
     use std::fs;
     use tempfile::tempdir;
 
@@ -48,11 +43,9 @@ mod tests {
 
         let tmp_dir = tempdir().unwrap();
         let migration_folder = tmp_dir.path();
-        let migration_folder_string = migration_folder.to_str().unwrap();
+        let migration_folder_string = migration_folder.to_str().unwrap().to_string();
 
-        env::set_var("DATABASE_MIGRATIONS_FOLDER", migration_folder_string);
-
-        let result = generate_new_migration(migration_name);
+        let result = generate_new_migration(&migration_folder_string, migration_name);
 
         assert!(result.is_ok());
 

@@ -1,6 +1,6 @@
 [package]
 name = "geni"
-version = "0.0.9"
+version = "0.0.10"
 edition = "2021"
 resolver = "2"
 description = "A standaline database CLI migration tool"
@@ -10,6 +10,19 @@ authors = ["Emil Privér"]
 keywords = ["database", "migration", "cli"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[lib]
+name = "geni"
+path = "src/lib/lib.rs"
+
+
+# leaving bin.rs and bmod.rs in src/bin makes
+# cargo treat the files as if bin.rs and bmod.rs
+# as individual binaries.
+[[bin]]
+name = "geni"
+path = "src/bin/geni/bin.rs"
 
 [dependencies]
 anyhow = "1.0.79"

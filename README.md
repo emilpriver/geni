@@ -206,3 +206,33 @@ geni up
 ```
 
 to make migrations.
+
+## Running Geni as a library
+
+Geni can be used as a library as well.
+
+All exposed functions can be found in [the library example folder]( ./examples/library/)
+
+```rust
+use geni;
+
+#[tokio::main]
+async fn main() {
+    // Migrate the database
+    geni::migrate_database(
+        "sqlite://./test.db".to_string(), // Database URL
+        None,                             // Database Token
+        "migrations".to_string(),         // Migration Table
+        "./migrations".to_string(),       // Migration Folder
+        "schema.sql".to_string(),         // Schema File
+        Some(30),                         // Wait timeout for the database to be ready
+        false,                            // Dump Schema
+    )
+    .await
+    .unwrap();
+
+    ()
+}
+```
+
+

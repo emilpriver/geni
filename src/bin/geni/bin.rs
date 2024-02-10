@@ -3,14 +3,6 @@ use log::{error, info};
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
 mod config;
-mod database_drivers;
-mod dump;
-mod generate;
-mod integration_test;
-mod management;
-mod migrate;
-mod status;
-mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -21,6 +13,22 @@ async fn main() {
         ColorChoice::Auto,
     )
     .expect("Failed to initialize logger");
+
+    let migration_path = config::migration_folder();
+    let database_url = match config::database_url() {
+        Ok(url) => url,
+        Err(..) => {
+            error!("No database url found, please set the DATABASE_URL environment variable");
+            return;
+        }
+    };
+    let wait_timeout = config::wait_timeout();
+    let migrations_table = config::migrations_table();
+    let migrations_folder = config::migration_folder();
+    let schema_file = config::schema_file();
+    let dump_schema = config::dump_schema_file();
+
+    let database_token = config::database_token();
 
     let matches = Command::new("geni")
         .about(crate_description!())
@@ -63,7 +71,7 @@ async fn main() {
     match matches.subcommand() {
         Some(("new", query_matches)) => {
             let name = query_matches.get_one::<String>("name").unwrap();
-            match generate::generate_new_migration(name) {
+            match geni::new_migration(migration_path, name).await {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -72,7 +80,16 @@ async fn main() {
             };
         }
         Some(("create", ..)) => {
-            match management::create().await {
+            match geni::create_database(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -81,7 +98,16 @@ async fn main() {
             };
         }
         Some(("drop", ..)) => {
-            match management::drop().await {
+            match geni::drop_database(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -90,7 +116,17 @@ async fn main() {
             };
         }
         Some(("up", ..)) => {
-            match migrate::up().await {
+            match geni::migrate_database(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+                dump_schema,
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -105,7 +141,18 @@ async fn main() {
                 .parse::<i64>()
                 .expect("Couldn't parse amount, is it a number?");
 
-            match migrate::down(&rollback_amount).await {
+            match geni::migate_down(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+                dump_schema,
+                rollback_amount,
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
@@ -116,13 +163,32 @@ async fn main() {
         Some(("status", query_matches)) => {
             let verbose = query_matches.contains_id("verbose");
 
-            if let Err(err) = status::status(verbose).await {
+            if let Err(err) = geni::status_migrations(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+                verbose,
+            )
+            .await
+            {
                 error!("{:?}", err);
                 std::process::exit(1);
             }
         }
         Some(("dump", ..)) => {
-            match dump::dump().await {
+            match geni::dump_database(
+                database_url,
+                database_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+                Some(wait_timeout),
+            )
+            .await
+            {
                 Err(err) => {
                     error!("{:?}", err);
                     std::process::exit(1);
