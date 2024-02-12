@@ -28,7 +28,7 @@ path = "src/bin/geni/bin.rs"
 anyhow = "1.0.79"
 async-trait = "0.1.74"
 chrono = { version = "0.4.31", features = ["serde"] }
-clap = { version = "4.4.18", features = ["env", "string", "derive", "cargo"] }
+clap = { version = "4.5.0", features = ["env", "string", "derive", "cargo"] }
 futures = "0.3.29"
 libsql-client = { git = "https://github.com/libsql/libsql-client-rs.git", version = "0.33.2", rev = "a432666", features = ["futures-util", "http"] }
 log = { version = "0.4.20", features = ["max_level_debug", "serde"] }
