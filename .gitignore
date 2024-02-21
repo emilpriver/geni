@@ -4,5 +4,6 @@
 .envrc
 test.sqlite
 example.db
+*.sqlite3
 /tmp/
 scripts/migrations

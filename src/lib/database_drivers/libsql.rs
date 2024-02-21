@@ -165,10 +165,7 @@ impl DatabaseDriver for LibSQLDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let res = self
-                .db
-                .execute("SELECT sql FROM sqlite_master WHERE type='table'")
-                .await?;
+            let res = self.db.execute("SELECT sql FROM sqlite_master").await?;
 
             let final_schema = res
                 .rows

@@ -164,9 +164,7 @@ impl DatabaseDriver for SqliteDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let res = self
-                .db
-                .execute("SELECT sql FROM sqlite_master WHERE type='table'")?;
+            let res = self.db.execute("SELECT sql FROM sqlite_master ")?;
             let final_schema = res
                 .rows
                 .iter()
