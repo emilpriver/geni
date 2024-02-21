@@ -1,5 +1,4 @@
 # Geni
-LibSQL
 Geni is a standalone migration tool designed to work in conjunction with your preferred ORM/toolkit/code. It allows multiple developers to collaborate without overriding database migrations. It can be used in a CD pipeline alongside your code to ensure your database stays up to date.
 
 This project was heavily inspired by [dbmate](https://github.com/amacneil/dbmate) and was created because dbmate lacked support for LibSQL.
