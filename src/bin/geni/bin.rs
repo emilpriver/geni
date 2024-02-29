@@ -14,22 +14,6 @@ async fn main() {
     )
     .expect("Failed to initialize logger");
 
-    let migration_path = config::migration_folder();
-    let database_url = match config::database_url() {
-        Ok(url) => url,
-        Err(..) => {
-            error!("No database url found, please set the DATABASE_URL environment variable");
-            return;
-        }
-    };
-    let wait_timeout = config::wait_timeout();
-    let migrations_table = config::migrations_table();
-    let migrations_folder = config::migration_folder();
-    let schema_file = config::schema_file();
-    let dump_schema = config::dump_schema_file();
-
-    let database_token = config::database_token();
-
     let matches = Command::new("geni")
         .about(crate_description!())
         .version(format!("v{}", crate_version!()))
@@ -67,6 +51,22 @@ async fn main() {
             Command::new("dump").about("Dump database structure"),
         ])
         .get_matches();
+
+    let migration_path = config::migration_folder();
+    let database_url = match config::database_url() {
+        Ok(url) => url,
+        Err(..) => {
+            error!("No database url found, please set the DATABASE_URL environment variable");
+            return;
+        }
+    };
+    let wait_timeout = config::wait_timeout();
+    let migrations_table = config::migrations_table();
+    let migrations_folder = config::migration_folder();
+    let schema_file = config::schema_file();
+    let dump_schema = config::dump_schema_file();
+
+    let database_token = config::database_token();
 
     match matches.subcommand() {
         Some(("new", query_matches)) => {
