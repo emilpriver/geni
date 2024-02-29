@@ -1,6 +1,6 @@
 [package]
 name = "geni"
-version = "0.0.12"
+version = "1.0.0"
 edition = "2021"
 resolver = "2"
 description = "A standaline database CLI migration tool"
