@@ -178,5 +178,7 @@ jobs:
       id: get-latest-tag
     - name: Update homebrew
       if: ${{ github.ref_name == steps.get-latest-tag.outputs.tag }}
+      env: 
+        GITHUN_REF_NAME: ${{github.ref_name}}
       run: bash scripts/update-homebrew-geni-formula.sh
     
