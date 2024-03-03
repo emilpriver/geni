@@ -66,11 +66,13 @@ jobs:
           - os: macos
             image: macos-latest
             arch: amd64
-            env: {}
+            env:
+              TARGET: aarch64-apple-darwin
           - os: macos
             image: macos-latest
             arch: arm64
-            env: {}
+            env: 
+              TARGET: x86_64h-apple-darwin
           - os: windows
             image: windows-latest
             arch: amd64
