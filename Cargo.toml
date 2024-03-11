@@ -28,11 +28,11 @@ path = "src/bin/geni/bin.rs"
 anyhow = "1.0.80"
 async-trait = "0.1.77"
 chrono = { version = "0.4.31", features = ["serde"] }
-clap = { version = "4.5.0", features = ["env", "string", "derive", "cargo"] }
+clap = { version = "4.5.2", features = ["env", "string", "derive", "cargo"] }
 futures = "0.3.30"
 libsql-client = { git = "https://github.com/libsql/libsql-client-rs.git", version = "0.33.2", rev = "a432666", features = ["futures-util", "http"] }
-log = { version = "0.4.20", features = ["max_level_debug", "serde"] }
 serde = { version = "1.0.197", features = ["derive"] }
+log = { version = "0.4.21", features = ["max_level_debug", "serde"] }
 serde_json = "1.0.108"
 serial_test = "3.0.0"
 simplelog = "0.12.1"
@@ -44,5 +44,5 @@ regex = "1.10.2"
 
 [dev-dependencies]
 mockall = "0.12.0"
-tempfile = "3.9.0"
+tempfile = "3.10.1"
 tempdir = "0.3.7"
