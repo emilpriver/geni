@@ -53,13 +53,6 @@ async fn main() {
         .get_matches();
 
     let migration_path = config::migration_folder();
-    let database_url = match config::database_url() {
-        Ok(url) => url,
-        Err(..) => {
-            error!("No database url found, please set the DATABASE_URL environment variable");
-            return;
-        }
-    };
     let wait_timeout = config::wait_timeout();
     let migrations_table = config::migrations_table();
     let migrations_folder = config::migration_folder();
@@ -80,6 +73,16 @@ async fn main() {
             };
         }
         Some(("create", ..)) => {
+            let database_url = match config::database_url() {
+                Ok(url) => url,
+                Err(..) => {
+                    error!(
+                        "No database url found, please set the DATABASE_URL environment variable"
+                    );
+                    return;
+                }
+            };
+
             match geni::create_database(
                 database_url,
                 database_token,
@@ -98,6 +101,16 @@ async fn main() {
             };
         }
         Some(("drop", ..)) => {
+            let database_url = match config::database_url() {
+                Ok(url) => url,
+                Err(..) => {
+                    error!(
+                        "No database url found, please set the DATABASE_URL environment variable"
+                    );
+                    return;
+                }
+            };
+
             match geni::drop_database(
                 database_url,
                 database_token,
@@ -116,6 +129,16 @@ async fn main() {
             };
         }
         Some(("up", ..)) => {
+            let database_url = match config::database_url() {
+                Ok(url) => url,
+                Err(..) => {
+                    error!(
+                        "No database url found, please set the DATABASE_URL environment variable"
+                    );
+                    return;
+                }
+            };
+
             match geni::migrate_database(
                 database_url,
                 database_token,
@@ -135,6 +158,15 @@ async fn main() {
             };
         }
         Some(("down", query_matches)) => {
+            let database_url = match config::database_url() {
+                Ok(url) => url,
+                Err(..) => {
+                    error!(
+                        "No database url found, please set the DATABASE_URL environment variable"
+                    );
+                    return;
+                }
+            };
             let rollback_amount = query_matches
                 .get_one::<String>("amount")
                 .unwrap_or(&"1".to_string())
@@ -161,6 +193,16 @@ async fn main() {
             };
         }
         Some(("status", query_matches)) => {
+            let database_url = match config::database_url() {
+                Ok(url) => url,
+                Err(..) => {
+                    error!(
+                        "No database url found, please set the DATABASE_URL environment variable"
+                    );
+                    return;
+                }
+            };
+
             let verbose = query_matches.contains_id("verbose");
 
             if let Err(err) = geni::status_migrations(
@@ -179,6 +221,16 @@ async fn main() {
             }
         }
         Some(("dump", ..)) => {
+            let database_url = match config::database_url() {
+                Ok(url) => url,
+                Err(..) => {
+                    error!(
+                        "No database url found, please set the DATABASE_URL environment variable"
+                    );
+                    return;
+                }
+            };
+
             match geni::dump_database(
                 database_url,
                 database_token,
