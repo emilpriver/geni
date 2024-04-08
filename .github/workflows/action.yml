@@ -1,4 +1,4 @@
-name: Golang test
+name: Action test
 
 on:
   pull_request:
