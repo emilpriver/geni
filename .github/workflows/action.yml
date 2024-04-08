@@ -5,6 +5,8 @@ on:
     branches:
       - main
   push:
+    branches:
+      - main
     paths:
       - action.yaml
 
@@ -28,7 +30,7 @@ jobs:
       - name: Generate test migrations
         run: bash scripts/test-migrations.sh
       - name: Test action
-        uses: ./action.yml
+        uses: ./action.yaml
         with:
           migrations_folder: "./migrations"
           wait_timeout: "30"
