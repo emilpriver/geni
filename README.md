@@ -193,7 +193,7 @@ DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
 ### Github Workflow
 
 ```
-- uses: emilpriver/geni@v0.0.8
+- uses: emilpriver/geni@main
   with:
     migrations_folder: "./migrations"
     wait_timeout: "30"
