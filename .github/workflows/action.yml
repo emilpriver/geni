@@ -1,0 +1,36 @@
+name: Golang test
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    paths:
+      - action.yaml
+
+jobs: 
+  vendor: 
+    runs-on: self-hosted
+    services:
+      postgres:
+        image: postgres:15.6
+        env:
+          postgres_password: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 7432:5432
+    steps:
+      - uses: actions/checkout@v4.1.0
+      - name: Generate test migrations
+        run: bash scripts/test-migrations.sh
+      - name: Test action
+        uses: .
+        with:
+          migrations_folder: "./migrations"
+          wait_timeout: "30"
+          migrations_table: "schema_migrations"
+          database_url: "postgresql://postgres:postgres@localhost:7432/development?sslmode=disable"
