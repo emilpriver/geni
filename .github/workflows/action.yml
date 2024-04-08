@@ -28,7 +28,7 @@ jobs:
       - name: Generate test migrations
         run: bash scripts/test-migrations.sh
       - name: Test action
-        uses: .
+        uses: ./action.yml
         with:
           migrations_folder: "./migrations"
           wait_timeout: "30"
