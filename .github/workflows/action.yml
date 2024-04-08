@@ -9,7 +9,7 @@ on:
       - main
 
 jobs: 
-  vendor: 
+  run_action: 
     runs-on: self-hosted
     services:
       postgres:
