@@ -110,7 +110,7 @@ geni help   # Print help message
     - Only if you use `Turso` and `LibSQL` and require token to authenticate. If not specified will Geni try to migrate without any auth
 - `DATABASE_WAIT_TIMEOUT`
     - Time for geni to wait before trying to migrate. Useful if your database need some time to boot
-    - Default: `0` seconds
+    - Default: `30` seconds
 - `DATABASE_SCHEMA_FILE`
   - Name of the schema migration file
 - `DATABASE_MIGRATIONS_TABLE`
@@ -205,7 +205,7 @@ DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
 #### Arguments
   - `migrations_folder`(optional): The path to where your migrations exist.
     - Default: ./migrations
-  - `wait_timeout`(optional): The time to wait before dropping the atempt to connect to the datbase
+  - `wait_timeout`(optional): The time to wait before dropping the attempt to connect to the database
     - Default: 30
   - `migrations_table`(optional): The name of the migrations table
     - Default: `schema_migrations`
@@ -215,7 +215,7 @@ DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
 
 ### Running in CI/CD
 
-In a CI/CD should the database_url come from a seurity store and be appended to the environment as the `DATABASE_URL`. If the `DATABASE_URL` is provided as a environment variable is the only command you need to run
+In a CI/CD should the database_url come from a security store and be appended to the environment as the `DATABASE_URL`. If the `DATABASE_URL` is provided as a environment variable is the only command you need to run
 
 ```rust
 geni up
