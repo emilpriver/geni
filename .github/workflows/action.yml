@@ -10,7 +10,7 @@ on:
 
 jobs: 
   run_action: 
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:15.6
