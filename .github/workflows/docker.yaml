@@ -37,7 +37,7 @@ jobs:
           - dockerfile: Dockerfile.slim
             name: -slim
             buildname: Slim
-    name: Build (${{ matrix.buildname }}
+    name: Build (${{ matrix.buildname }})
     steps:
       - uses: actions/checkout@v4
       - name: Login to GitHub Container Registry
