@@ -33,8 +33,11 @@ jobs:
         include:
           - dockerfile: Dockerfile
             name:
+            buildname: Default
           - dockerfile: Dockerfile.slim
             name: -slim
+            buildname: Slim
+    name: Build (${{ matrix.buildname }}
     steps:
       - uses: actions/checkout@v4
       - name: Login to GitHub Container Registry
@@ -45,7 +48,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build
         if: startsWith(github.ref, 'refs/tags/') == false
-        run: docker build -t geni -f ${{matric.dockerfile}} .
+        run: docker build -t geni -f ${{matrix.dockerfile}} .
       - name: Build Tag
         if: startsWith(github.ref, 'refs/tags/')
         run: docker build -t ghcr.io/${{ github.repository }}:${{ github.ref_name }}${{matrix.name}} .
