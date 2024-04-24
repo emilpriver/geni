@@ -6,10 +6,9 @@ RUN cargo build --release
 
 RUN cp target/release/geni /usr/src/app/geni
 
-FROM alpine:3.19.1
-COPY --from=builder /usr/src/app/geni /usr/src/app/geni
+FROM gcr.io/distroless/cc-debian12
 
-RUN apk add mariadb-client postgresql-client
+COPY --from=builder /usr/src/app/geni /usr/src/app/geni
 
 ENV DATABASE_MIGRATIONS_FOLDER="/migrations"
 

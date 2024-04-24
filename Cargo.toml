@@ -46,3 +46,10 @@ regex = "1.10.4"
 mockall = "0.12.0"
 tempfile = "3.10.1"
 tempdir = "0.3.7"
+
+[profile.release]
+opt-level = 'z'     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations
+panic = 'abort'     # Abort on panic
+strip = true        # Strip symbols from binary*
