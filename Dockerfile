@@ -2,6 +2,8 @@ FROM rust:1.75.0-alpine3.19 as builder
 WORKDIR /usr/src/app
 COPY . .
 
+RUN apk add musl-dev
+
 RUN cargo build --release
 
 RUN cp target/release/geni /usr/src/app/geni
