@@ -38,14 +38,14 @@ The application is developed using the Rust programming language and relies on t
 
 ### Github
 
-```
+```bash
 $ sudo curl -fsSL -o /usr/local/bin/geni https://github.com/emilpriver/geni/releases/latest/download/geni-linux-amd64
 $ sudo chmod +x /usr/local/bin/geni
 ```
 
 ### Homebrew
 
-```
+```bash
 brew install emilpriver/geni/geni
 ```
 
@@ -55,13 +55,13 @@ TBA
 
 ### PKGX
 Run using PKGX
-```
+```bash
 pkgx geni up
 ```
 
 ### Cargo
 
-```
+```bash
 cargo install geni
 ```
 
@@ -69,19 +69,26 @@ cargo install geni
 
 Docker images are published to GitHub Container Registry ([ghcr.io/emilpriver/geni](https://ghcr.io/emilpriver/geni)).
 
-```
+```bash
 $ docker run --rm -it --network=host ghcr.io/emilpriver/geni:latest --help
+```
+there is also a slim docker image that don't have each database respective libraries(such as pg_dump). 
+
+Note: *This image won't try to dump the database*
+
+```bash
+$ docker run --rm -it --network=host ghcr.io/emilpriver/geni:latest-slim --help
 ```
 
 If you wish to create or apply migrations, you will need to use Docker's [bind mount](https://docs.docker.com/storage/bind-mounts/) feature to make your local working directory (`pwd`) available inside the geni container:
 
-```
+```bash
 $ docker run --rm -it --network=host -v "$(pwd)/migrations:/migrations" ghcr.io/emilpriver/geni:latest new create_users_table`
 ```
 
 ### Commands
 
-```rust
+```bash
 geni new    # Generate a new migrations file
 geni up     # Run any pending migration
 geni down   # Rollback migrations, use --amount to speify how many migrations(default 1)
@@ -121,7 +128,7 @@ geni help   # Print help message
 
 Running 
 
-```rust
+```bash
 DATABASE_URL="x" geni new hello_world
 ```
 
@@ -131,7 +138,7 @@ Example:
 
 If I want to create  table named `Persons` should I add this to `.up.sql`
 
-```rust
+```sql
 CREATE TABLE Persons (
     PersonID int
 )
@@ -139,7 +146,7 @@ CREATE TABLE Persons (
 
 And the rollback migration should then be
 
-```rust
+```sql
 DROP TABLE Persons;
 ```
 
@@ -166,7 +173,7 @@ CREATE TABLE table_2 (
 
 Running migration can be done using
 
-```rust
+```bash
 geni up
 ```
 
@@ -174,25 +181,25 @@ geni up
 
 Rollbacking last added migrations can be done using
 
-```rust
+```bash
 geni down
 ```
 
 and If you want to rollback more then 1 can you add `-a` to the cli to specify how many
 
-```rust
+```bash
 geni down -a 3
 ```
 
 ### Running from CLI
 
-```rust
+```bash
 DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
 ```
 
 ### Github Workflow
 
-```
+```yaml
 - uses: emilpriver/geni@main
   with:
     migrations_folder: "./migrations"
@@ -217,7 +224,7 @@ DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
 
 In a CI/CD should the database_url come from a security store and be appended to the environment as the `DATABASE_URL`. If the `DATABASE_URL` is provided as a environment variable is the only command you need to run
 
-```rust
+```bash
 geni up
 ```
 
