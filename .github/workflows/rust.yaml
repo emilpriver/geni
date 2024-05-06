@@ -177,4 +177,3 @@ jobs:
       env: 
         GITHUN_REF_NAME: ${{github.ref_name}}
       run: bash scripts/update-homebrew-geni-formula.sh
-    

@@ -830,7 +830,7 @@ dependencies = [
 
 [[package]]
 name = "geni"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1245,8 +1245,9 @@ dependencies = [
 
 [[package]]
 name = "libsql-client"
-version = "0.33.2"
-source = "git+https://github.com/libsql/libsql-client-rs.git?rev=a432666#a432666c4c0094af0ac4cda17522e7442e2f57e9"
+version = "0.33.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "559a5db6abf6de67f14c188e4f570c05c4aeaf6b167dfa1739fc6416d8e6ad6f"
 dependencies = [
  "anyhow",
  "base64 0.21.5",
