@@ -59,6 +59,13 @@ Run using PKGX
 pkgx geni up
 ```
 
+### Nix flake
+Run using nix
+```bash
+nix run github:emilpriver/geni -- up
+```
+
+
 ### Cargo
 
 ```bash
