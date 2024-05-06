@@ -32,4 +32,5 @@ jobs:
     - name: Nix flake check
       run: nix flake check
     - name: Test nix build
-      run: nix run . -- --help | grep -q "Usage: geni <COMMAND>" || exit 2
+      run: | 
+        nix run . -- --help | grep -q "Usage: geni <COMMAND>" || exit 2
