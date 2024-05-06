@@ -22,7 +22,6 @@ jobs:
   nix:
     needs: [test]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
     - uses: cachix/install-nix-action@v25
