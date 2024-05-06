@@ -30,7 +30,6 @@ async-trait = "0.1.80"
 chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.5.2", features = ["env", "string", "derive", "cargo"] }
 futures = "0.3.30"
-libsql-client = { git = "https://github.com/libsql/libsql-client-rs.git", version = "0.33.2", rev = "a432666", features = ["futures-util", "http"] }
 serde = { version = "1.0.197", features = ["derive"] }
 log = { version = "0.4.21", features = ["max_level_debug", "serde"] }
 serde_json = "1.0.108"
@@ -41,6 +40,7 @@ sqlx = { version = "0.7.3",  features = ["runtime-tokio", "chrono", "postgres", 
 url = { version = "2.5.0", features = ["serde"] }
 which = "6.0.1"
 regex = "1.10.4"
+libsql-client = { version = "0.33.4", features = ["futures-util", "http"] }
 
 [dev-dependencies]
 mockall = "0.12.0"
