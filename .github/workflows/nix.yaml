@@ -28,8 +28,6 @@ jobs:
     - uses: cachix/install-nix-action@v25
       with:
         nix_path: nixpkgs=channel:nixos-unstable
-    - name: Databases
-      run: docker compose up -d
     - name: Nix flake check
       run: nix flake check
     - name: Test nix build
