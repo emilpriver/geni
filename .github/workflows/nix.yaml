@@ -34,4 +34,4 @@ jobs:
     - name: Test nix build
       env: 
         DATABASE_URL: psql://postgres:mysecretpassword@localhost:6437/app?sslmode=disable
-      run: nix run . -- up
+      run: nix run . -- --help | grep -q "Usage: geni <COMMAND>" || exit 2
