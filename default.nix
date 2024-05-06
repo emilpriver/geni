@@ -1,23 +1,10 @@
 { pkgs ? import <nixpkgs> {} }:
 let manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
-
-let
-  gitignoreSource =
-    if pkgs.gitignoreSrc != null
-    then pkgs.gitignoreSrc.gitignoreSource
-    else (import (fetchFromGitHub {
-      owner = "hercules-ci";
-      repo = "gitignore";
-      rev = "c4662e662462e7bf3c2a968483478a665d00e717";
-      sha256 = "0jx2x49p438ap6psy8513mc1nnpinmhm8ps0a4ngfms9jmvwrlbi";
-    }) { inherit lib; }).gitignoreSource;
-in
-
 in pkgs.rustPlatform.buildRustPackage rec {
   pname = "geni";
   version = manifest.version;
   cargoLock.lockFile = ./Cargo.lock;
-  src = gitignoreSource ./.;
+  src = pkgs.lib.sources.cleanSource ./.;
   # The test is running before we build nix 
   doCheck = false;
 
