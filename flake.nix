@@ -7,7 +7,7 @@
   };
 
   outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
-    flake-utils.lib.eachSystem [ "x86_64-linux" ] (system: let
+    flake-utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages.${system};
 
       # Importing the package configuration from previously separate default.nix
@@ -46,7 +46,7 @@
 
       legacyPackages = packages;
 
-      defaultPackage = packages.geni;
+      defaultPackage = self.packages.${system}.geni;
 
       devShell = pkgs.mkShell {
         CARGO_INSTALL_ROOT = "${toString ./.}/.cargo";
