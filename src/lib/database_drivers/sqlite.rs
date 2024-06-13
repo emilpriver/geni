@@ -22,7 +22,11 @@ impl<'a> SqliteDriver {
         migrations_folder: String,
         schema_file: String,
     ) -> Result<SqliteDriver> {
-        let path = std::path::Path::new(db_url.split_once("://").unwrap().1);
+        let path = if db_url.contains("://") {
+            std::path::Path::new(db_url.split_once("://").unwrap().1)
+        } else {
+            std::path::Path::new(db_url)
+        };
 
         if File::open(path.to_str().unwrap()).is_err() {
             if let Some(parent) = path.parent() {
