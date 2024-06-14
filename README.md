@@ -46,7 +46,7 @@ $ sudo chmod +x /usr/local/bin/geni
 ### Homebrew
 
 ```bash
-brew install emilpriver/geni/geni
+brew install geni
 ```
 
 ### Scoop
