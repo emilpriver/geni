@@ -87,7 +87,7 @@ pub async fn new(
     let scheme = parsed_db_url.scheme();
 
     match scheme {
-        "http" | "https" => {
+        "http" | "https" | "libsql" => {
             let driver = libsql::LibSQLDriver::new(
                 &parsed_db_url.to_string(),
                 db_token,

@@ -12,7 +12,7 @@ pub enum Database {
 impl Database {
     pub fn new(s: &str) -> Result<Database> {
         match s {
-            "https" | "http" => Ok(Database::LibSQL),
+            "https" | "http" | "libsql" => Ok(Database::LibSQL),
             "psql" | "postgres" | "postgresql" => Ok(Database::Postgres),
             "mariadb" => Ok(Database::MariaDB),
             "mysql" => Ok(Database::MySQL),
