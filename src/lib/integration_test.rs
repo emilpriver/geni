@@ -185,7 +185,7 @@ mod tests {
         );
 
         let schema_dump_file = format!("{}/schema.sql", migration_folder_string);
-        assert_eq!(true, Path::new(&schema_dump_file).exists());
+        assert!(Path::new(&schema_dump_file).exists());
 
         Ok(())
     }

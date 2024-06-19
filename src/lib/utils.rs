@@ -54,7 +54,7 @@ pub fn should_run_in_transaction(query: &str) -> bool {
         return false;
     }
 
-    return true;
+    true
 }
 
 #[cfg(test)]
@@ -64,29 +64,29 @@ mod tests {
     #[test]
     fn test_without_transaction_no_in_first_line() {
         let query = "something else\ntransaction: no";
-        assert_eq!(should_run_in_transaction(query), true);
+        assert!(should_run_in_transaction(query));
     }
 
     #[test]
     fn test_with_empty_line() {
         let query = "";
-        assert_eq!(should_run_in_transaction(query), true);
+        assert!(should_run_in_transaction(query));
     }
 
     #[test]
     fn test_with_transaction_yes_in_first_line() {
         let query = "transaction: yes\nSELECT * FROM users";
-        assert_eq!(should_run_in_transaction(query), true);
+        assert!(should_run_in_transaction(query));
     }
 
     #[test]
     fn test_with_transaction_no_in_first_line() {
         let query = "transaction: no\nSELECT * FROM users";
-        assert_eq!(should_run_in_transaction(query), false);
+        assert!(!should_run_in_transaction(query));
     }
     #[test]
     fn test_with_transaction_no_in_first_line_without_space() {
         let query = "transaction:no\nSELECT * FROM users";
-        assert_eq!(should_run_in_transaction(query), false);
+        assert!(!should_run_in_transaction(query));
     }
 }

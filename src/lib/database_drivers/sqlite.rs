@@ -1,14 +1,15 @@
 use crate::database_drivers::DatabaseDriver;
-use anyhow::{bail, Result};
-use libsql_client::{de, local::Client};
+use anyhow::Result;
+
+use libsql::{params, Builder, Connection};
 use std::fs::{self, File};
 use std::future::Future;
 use std::pin::Pin;
 
-use super::{utils, SchemaMigration};
+use super::utils;
 
 pub struct SqliteDriver {
-    db: Client,
+    db: Connection,
     path: String,
     migrations_table: String,
     migrations_folder: String,
@@ -35,8 +36,7 @@ impl<'a> SqliteDriver {
 
             File::create(path)?;
         }
-
-        let client = Client::new(path.to_str().unwrap()).unwrap();
+        let client = Builder::new_local(path).build().await?.connect()?;
 
         Ok(SqliteDriver {
             db: client,
@@ -56,29 +56,11 @@ impl DatabaseDriver for SqliteDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             if run_in_transaction {
-                self.db.execute("BEGIN;")?;
+                self.db.execute_transactional_batch(query).await?;
+            } else {
+                self.db.execute_batch(query).await?;
             }
 
-            let queries = query
-                .split(';')
-                .map(|x| x.trim())
-                .filter(|x| !x.is_empty())
-                .collect::<Vec<&str>>();
-            for query in queries {
-                match self.db.execute(query) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        if run_in_transaction {
-                            self.db.execute("ROLLBACK;")?;
-                        }
-                        bail!("{:?}", e);
-                    }
-                }
-            }
-
-            if run_in_transaction {
-                self.db.execute("COMMIT;")?;
-            }
             Ok(())
         };
 
@@ -93,17 +75,21 @@ impl DatabaseDriver for SqliteDriver {
                 "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY);",
                 self.migrations_table
             );
-            self.db.execute(query)?;
+            self.db.execute(query.as_str(), params![]).await?;
 
             let query = format!("SELECT id FROM {} ORDER BY id DESC;", self.migrations_table);
+            let mut result = self.db.query(query.as_str(), params![]).await?;
 
-            let result = self.db.execute(query)?;
+            let mut schema_migrations: Vec<String> = vec![];
+            while let Some(row) = result.next().await.unwrap() {
+                if let Ok(r) = row.get_str(0) {
+                    schema_migrations.push(r.to_string());
+                    continue;
+                }
+                break;
+            }
 
-            let rows = result.rows.iter().map(de::from_row);
-
-            let res = rows.collect::<Result<Vec<SchemaMigration>>>();
-
-            res.map(|v| v.into_iter().map(|s| s.id).collect())
+            Ok(schema_migrations)
         };
 
         Box::pin(fut)
@@ -114,13 +100,17 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute(
-                format!(
-                    "INSERT INTO {} (id) VALUES ('{}');",
-                    self.migrations_table, id,
+            self.db
+                .execute(
+                    format!(
+                        "INSERT INTO {} (id) VALUES ('{}');",
+                        self.migrations_table, id,
+                    )
+                    .as_str(),
+                    params![],
                 )
-                .as_str(),
-            )?;
+                .await?;
+
             Ok(())
         };
 
@@ -132,9 +122,12 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            self.db.execute(
-                format!("DELETE FROM {} WHERE id = '{}';", self.migrations_table, id).as_str(),
-            )?;
+            self.db
+                .execute(
+                    format!("DELETE FROM {} WHERE id = '{}';", self.migrations_table, id).as_str(),
+                    params![],
+                )
+                .await?;
             Ok(())
         };
 
@@ -168,28 +161,28 @@ impl DatabaseDriver for SqliteDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let res = self.db.execute("SELECT sql FROM sqlite_master ")?;
-            let final_schema = res
-                .rows
-                .iter()
-                .map(|row| {
-                    row.values
-                        .iter()
-                        .map(|v| {
-                            let m = v
-                                .to_string()
-                                .trim_start_matches('"')
-                                .trim_end_matches('"')
-                                .to_string()
-                                .replace("\\n", "\n");
+            let mut result = self
+                .db
+                .query("SELECT sql FROM sqlite_master", params![])
+                .await?;
 
-                            format!("{};", m)
-                        })
-                        .collect::<Vec<String>>()
-                        .join("\n")
-                })
-                .collect::<Vec<String>>()
-                .join("\n");
+            let mut schemas: Vec<String> = vec![];
+            while let Some(row) = result.next().await.unwrap_or(None) {
+                if let Ok(r) = row.get_str(0) {
+                    schemas.push(
+                        r.to_string()
+                            .trim_start_matches('"')
+                            .trim_end_matches('"')
+                            .to_string()
+                            .replace("\\n", "\n"),
+                    );
+                    continue;
+                }
+
+                break;
+            }
+
+            let final_schema = schemas.join("\n");
 
             utils::write_to_schema_file(
                 final_schema,

@@ -90,7 +90,7 @@ pub async fn drop_database(
     .await
 }
 
-pub async fn new_migration(migration_path: String, name: &String) -> anyhow::Result<()> {
+pub async fn new_migration(migration_path: String, name: &str) -> anyhow::Result<()> {
     generate::generate_new_migration(&migration_path, name)
 }
 
