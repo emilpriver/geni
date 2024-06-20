@@ -22,8 +22,7 @@ impl<'a> LibSQLDriver {
         migrations_folder: String,
         schema_file: String,
     ) -> Result<LibSQLDriver> {
-        // FIXME: write a code that check if db_url is a http endpoint
-        let db = if !db_url.starts_with("./") {
+        let db = if !url.starts_with("libsql://./") {
             let auth_token = if let Some(t) = token {
                 t
             } else {
