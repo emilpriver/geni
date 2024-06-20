@@ -22,7 +22,7 @@ impl<'a> LibSQLDriver {
         migrations_folder: String,
         schema_file: String,
     ) -> Result<LibSQLDriver> {
-        let db = if !url.starts_with("libsql://./") {
+        let db = if !db_url.starts_with("libsql://./") {
             let auth_token = if let Some(t) = token {
                 t
             } else {
@@ -35,7 +35,7 @@ impl<'a> LibSQLDriver {
                 .await
                 .unwrap()
         } else {
-            Builder::new_local(db_url).build().await.unwrap()
+            bail!("libsql:// should only be used with remote database. Use sqlite:// protocol when running local sqlite files")
         };
 
         let client = db.connect()?;
