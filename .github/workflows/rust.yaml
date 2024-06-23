@@ -21,7 +21,8 @@ jobs:
       run: chmod +x scripts/verify-version.sh && scripts/verify-version.sh
     - name: Setup
       run: |
-        sudo apt-get install -y mariadb-client postgresql-client
+        sudo apt-get update
+        sudo apt-get install -y mariadb-client
     - name: Databases
       run: docker compose up -d
     - name: Run tests
