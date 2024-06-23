@@ -11,7 +11,7 @@ RUN cp target/release/geni /usr/src/app/geni
 FROM alpine:3.19.1
 COPY --from=builder /usr/src/app/geni /usr/src/app/geni
 
-RUN apk add mariadb-client postgresql-client
+RUN apk add mariadb-client
 
 ENV DATABASE_MIGRATIONS_FOLDER="/migrations"
 
