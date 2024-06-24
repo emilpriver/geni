@@ -34,9 +34,6 @@ jobs:
           - dockerfile: Dockerfile
             name:
             buildname: Default
-          - dockerfile: Dockerfile.slim
-            name: -slim
-            buildname: Slim
     steps:
       - uses: actions/checkout@v4
       - name: Login to GitHub Container Registry

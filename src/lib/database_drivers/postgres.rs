@@ -194,11 +194,6 @@ impl DatabaseDriver for PostgresDriver {
                 --
 
 
-                -- EXTENSIONS
-
-                CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
-
-                -- TABLES
             "#;
 
             let mut schema = schema

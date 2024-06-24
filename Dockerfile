@@ -11,8 +11,6 @@ RUN cp target/release/geni /usr/src/app/geni
 FROM alpine:3.19.1
 COPY --from=builder /usr/src/app/geni /usr/src/app/geni
 
-RUN apk add mariadb-client
-
 ENV DATABASE_MIGRATIONS_FOLDER="/migrations"
 
 LABEL org.opencontainers.image.description "Geni: Standalone database migration tool which works for Postgres, MariaDB, MySQL, Sqlite and LibSQL(Turso)."
