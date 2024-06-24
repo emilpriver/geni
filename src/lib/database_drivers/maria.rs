@@ -12,7 +12,6 @@ use super::utils;
 pub struct MariaDBDriver {
     db: MySqlConnection,
     url: String,
-    url_path: url::Url,
     db_name: String,
     migrations_table: String,
     migrations_folder: String,
@@ -63,7 +62,6 @@ impl<'a> MariaDBDriver {
             db: client.unwrap(),
             url: db_url.to_string(),
             db_name: database_name.to_string(),
-            url_path,
             migrations_folder,
             migrations_table,
             schema_file,

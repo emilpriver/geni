@@ -1,20 +1,17 @@
 use crate::database_drivers::{utils, DatabaseDriver};
 use anyhow::{bail, Result};
 use log::{error, info};
-use regex::Regex;
+
 use sqlx::mysql::MySqlRow;
 use sqlx::Executor;
 use sqlx::{Connection, MySqlConnection, Row};
 use std::future::Future;
 use std::pin::Pin;
-use tokio::process::Command;
-use url::Url;
 
 pub struct MySQLDriver {
     db: MySqlConnection,
     url: String,
     db_name: String,
-    url_path: Url,
     migrations_table: String,
     migrations_folder: String,
     schema_file: String,
@@ -64,7 +61,6 @@ impl<'a> MySQLDriver {
             db: client.unwrap(),
             url: db_url.to_string(),
             db_name: database_name.to_string(),
-            url_path,
             migrations_folder,
             migrations_table,
             schema_file,
@@ -93,9 +89,9 @@ impl DatabaseDriver for MySQLDriver {
                     }
                 }
                 return Ok(());
-            } else {
-                self.db.execute(query).await?;
             }
+
+            self.db.execute(query).await?;
 
             Ok(())
         };
