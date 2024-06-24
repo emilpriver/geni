@@ -5,6 +5,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::usize;
 
+pub mod clickhouse;
 pub mod libsql;
 pub mod maria;
 pub mod mysql;

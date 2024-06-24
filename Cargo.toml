@@ -41,6 +41,7 @@ url = { version = "2.5.0", features = ["serde"] }
 which = "6.0.1"
 regex = "1.10.5"
 libsql = "0.4.0"
+clickhouse = "0.11.6"
 
 [dev-dependencies]
 mockall = "0.12.0"
