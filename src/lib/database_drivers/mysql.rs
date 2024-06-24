@@ -201,7 +201,6 @@ impl DatabaseDriver for MySQLDriver {
                 --
 
 
-                -- TABLES
             "#;
 
             let mut schema = schema
@@ -213,28 +212,34 @@ impl DatabaseDriver for MySQLDriver {
             let tables: Vec<String> = sqlx::query(
                 r#"
                 SELECT 
-                    CONCAT('CREATE TABLE ', t.table_name, ' (\n', 
-                        GROUP_CONCAT(CONCAT('  ', c.column_name, ' ', c.column_type, 
-                                            IF(c.is_nullable = 'NO', ' NOT NULL', ''), 
-                                            IF(c.column_default IS NOT NULL, CONCAT(' DEFAULT ', c.column_default), '')) 
-                        SEPARATOR ',\n'), 
-                    '\n);') AS sql
+                    CONCAT(
+                        'CREATE TABLE ', 
+                        TABLE_NAME, 
+                        ' (\n',
+                        GROUP_CONCAT(
+                            CONCAT(
+                                '  ', COLUMN_NAME, ' ', COLUMN_TYPE,
+                                IF(IS_NULLABLE = 'NO', ' NOT NULL', ''),
+                                IF(COLUMN_DEFAULT IS NOT NULL, CONCAT(' DEFAULT ', COLUMN_DEFAULT), '')
+                            ) SEPARATOR', \n'
+                        ),
+                        '\n);'
+                    ) AS create_table_stmt
                 FROM 
-                    information_schema.columns c
-                JOIN 
-                    information_schema.tables t ON c.table_name = t.table_name
+                    INFORMATION_SCHEMA.COLUMNS
                 WHERE 
-                    t.table_schema = DATABASE() 
-                    AND t.table_type = 'BASE TABLE'
+                    TABLE_SCHEMA = ? AND TABLE_NAME NOT IN (SELECT TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = ?)
                 GROUP BY 
-                    t.table_name
+                    TABLE_NAME
                 ORDER BY 
-                    t.table_name;
+                    TABLE_NAME;
                 "#,
-                )
-                .map(|row: MySqlRow| row.get("sql"))
-                .fetch_all(&mut self.db)
-                .await?;
+            )
+            .bind(&self.db_name)
+            .bind(&self.db_name)
+            .map(|row: MySqlRow| row.get("create_table_stmt"))
+            .fetch_all(&mut self.db)
+            .await?;
 
             if tables.len() > 0 {
                 schema.push_str("-- TABLES \n\n");
@@ -247,16 +252,21 @@ impl DatabaseDriver for MySQLDriver {
             let views: Vec<String> = sqlx::query(
                 r#"
                 SELECT 
-                    CONCAT('CREATE VIEW ', table_name, ' AS\n', view_definition, ';') AS sql
+                    CONCAT(
+                        'CREATE VIEW ', 
+                        TABLE_NAME, 
+                        ' AS ', 
+                        VIEW_DEFINITION, 
+                        ';'
+                    ) AS create_view_stmt
                 FROM 
-                    information_schema.views
+                    INFORMATION_SCHEMA.VIEWS
                 WHERE 
-                    table_schema = DATABASE()
-                ORDER BY 
-                    table_name;
+                    TABLE_SCHEMA = ?;
                 "#,
             )
-            .map(|row: MySqlRow| row.get("sql"))
+            .bind(&self.db_name)
+            .map(|row: MySqlRow| row.get("create_view_stmt"))
             .fetch_all(&mut self.db)
             .await?;
 
@@ -270,47 +280,76 @@ impl DatabaseDriver for MySQLDriver {
 
             let constraints: Vec<String> = sqlx::query(
                 r#"
-                SELECT 
-                    CASE 
-                        WHEN tc.constraint_type = 'PRIMARY KEY' THEN 
-                            CONCAT('ALTER TABLE ', tc.table_name, 
-                                ' ADD CONSTRAINT ', tc.constraint_name, 
-                                ' PRIMARY KEY (', GROUP_CONCAT(kcu.column_name ORDER BY kcu.ordinal_position SEPARATOR ', '), ');')
-                        WHEN tc.constraint_type = 'FOREIGN KEY' THEN 
-                            CONCAT('ALTER TABLE ', tc.table_name, 
-                                ' ADD CONSTRAINT ', tc.constraint_name, 
-                                ' FOREIGN KEY (', GROUP_CONCAT(kcu.column_name ORDER BY kcu.ordinal_position SEPARATOR ', '), ') REFERENCES ', 
-                                ccu.table_name, '(', GROUP_CONCAT(ccu.column_name ORDER BY ccu.ordinal_position SEPARATOR ', '), ');')
-                        WHEN tc.constraint_type = 'UNIQUE' THEN 
-                            CONCAT('ALTER TABLE ', tc.table_name, 
-                                ' ADD CONSTRAINT ', tc.constraint_name, 
-                                ' UNIQUE (', GROUP_CONCAT(kcu.column_name ORDER BY kcu.ordinal_position SEPARATOR ', '), ');')
-                        WHEN tc.constraint_type = 'CHECK' THEN 
-                            CONCAT('ALTER TABLE ', tc.table_name, 
-                                ' ADD CONSTRAINT ', tc.constraint_name, 
-                                ' CHECK (', cc.check_clause, ');')
-                    END AS sql
-                FROM 
-                    information_schema.table_constraints tc
-                JOIN 
-                    information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
-                LEFT JOIN 
-                    information_schema.referential_constraints rc ON tc.constraint_name = rc.constraint_name
-                LEFT JOIN 
-                    information_schema.constraint_column_usage ccu ON rc.unique_constraint_name = ccu.constraint_name
-                LEFT JOIN 
-                    information_schema.check_constraints cc ON tc.constraint_name = cc.constraint_name
-                WHERE 
-                    tc.table_schema = DATABASE()
-                GROUP BY 
-                    tc.constraint_type, tc.table_name, tc.constraint_name, cc.check_clause
-                ORDER BY 
-                    tc.table_name, tc.constraint_name;
+                    SELECT 
+                        CONCAT(
+                            'ALTER TABLE ', 
+                            TABLE_NAME, 
+                            ' ADD CONSTRAINT ',
+                            CASE 
+                                WHEN CONSTRAINT_NAME = 'PRIMARY' THEN 'PRIMARY KEY'
+                                WHEN INDEX_NAME != 'PRIMARY' THEN 'UNIQUE'
+                                ELSE 'FOREIGN KEY'
+                            END, 
+                            ' (', 
+                            COLUMN_NAME, 
+                            CASE 
+                                WHEN REFERENCED_TABLE_NAME IS NOT NULL THEN 
+                                    CONCAT(') REFERENCES ', REFERENCED_TABLE_NAME, ' (', REFERENCED_COLUMN_NAME, ')')
+                                ELSE ')'
+                            END, 
+                            ';'
+                        ) AS create_constraint_stmt
+                    FROM 
+                        (
+                        SELECT 
+                            TABLE_NAME, 
+                            COLUMN_NAME, 
+                            CONSTRAINT_NAME, 
+                            NULL AS INDEX_NAME, 
+                            NULL AS REFERENCED_TABLE_NAME, 
+                            NULL AS REFERENCED_COLUMN_NAME
+                        FROM 
+                            INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                        WHERE 
+                            TABLE_SCHEMA = ? 
+                            AND CONSTRAINT_NAME = 'PRIMARY'
+                        UNION ALL
+                        SELECT 
+                            TABLE_NAME, 
+                            COLUMN_NAME, 
+                            NULL AS CONSTRAINT_NAME, 
+                            INDEX_NAME, 
+                            NULL AS REFERENCED_TABLE_NAME, 
+                            NULL AS REFERENCED_COLUMN_NAME
+                        FROM 
+                            INFORMATION_SCHEMA.STATISTICS
+                        WHERE 
+                            TABLE_SCHEMA = ? 
+                            AND INDEX_NAME != 'PRIMARY'
+                        UNION ALL
+                        SELECT 
+                            TABLE_NAME, 
+                            COLUMN_NAME, 
+                            CONSTRAINT_NAME, 
+                            NULL AS INDEX_NAME, 
+                            REFERENCED_TABLE_NAME, 
+                            REFERENCED_COLUMN_NAME
+                        FROM 
+                            INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                        WHERE 
+                            TABLE_SCHEMA = ? 
+                            AND REFERENCED_TABLE_NAME IS NOT NULL
+                        ) AS constraints
+                    ORDER BY 
+                        TABLE_NAME;
                 "#,
-            )
-            .map(|row: MySqlRow| row.get("sql"))
-            .fetch_all(&mut self.db)
-            .await?;
+                )
+                .bind(&self.db_name)
+                .bind(&self.db_name)
+                .bind(&self.db_name)
+                .map(|row: MySqlRow| row.get("create_constraint_stmt"))
+                .fetch_all(&mut self.db)
+                .await?;
 
             if constraints.len() > 0 {
                 schema.push_str("-- CONSTRAINTS \n\n");
@@ -322,17 +361,28 @@ impl DatabaseDriver for MySQLDriver {
 
             let indexes: Vec<String> = sqlx::query(
                 r#"
-                SELECT 
-                    index_definition AS sql
-                FROM 
-                    information_schema.statistics
-                WHERE 
-                    table_schema = DATABASE()
-                ORDER BY 
-                    index_name;
+                    SELECT 
+                        CONCAT(
+                            'CREATE INDEX ', 
+                            INDEX_NAME, 
+                            ' ON ', 
+                            TABLE_NAME, 
+                            ' (', 
+                            COLUMN_NAME, 
+                            ');'
+                        ) AS create_index_stmt
+                    FROM 
+                        INFORMATION_SCHEMA.STATISTICS
+                    WHERE 
+                        TABLE_SCHEMA = ?
+                    GROUP BY 
+                        TABLE_NAME, INDEX_NAME, COLUMN_NAME
+                    ORDER BY 
+                        TABLE_NAME;
                 "#,
             )
-            .map(|row: MySqlRow| row.get("sql"))
+            .bind(&self.db_name)
+            .map(|row: MySqlRow| row.get("create_index_stmt"))
             .fetch_all(&mut self.db)
             .await?;
 
@@ -344,58 +394,32 @@ impl DatabaseDriver for MySQLDriver {
                 }
             }
 
-            let sequences: Vec<String> = sqlx::query(
-                r#"
-                SELECT 
-                    CONCAT('CREATE SEQUENCE ', sequence_name, 
-                        ' START WITH ', start_value, 
-                        ' INCREMENT BY ', increment_by, 
-                        ' MINVALUE ', min_value, 
-                        ' MAXVALUE ', max_value, 
-                        ' CYCLE ', IF(cycle_option = 'YES', 'YES', 'NO'), ';') AS sql
-                FROM 
-                    information_schema.sequences
-                WHERE 
-                    sequence_schema = DATABASE()
-                ORDER BY 
-                    sequence_name;
-                "#,
-            )
-            .map(|row: MySqlRow| row.get("sql"))
-            .fetch_all(&mut self.db)
-            .await?;
-
-            if sequences.len() > 0 {
-                schema.push_str("-- SEQUENCES \n\n");
-                for ele in sequences.iter() {
-                    schema.push_str(ele.as_str());
-                    schema.push_str("\n\n")
-                }
-            }
-
             let comments: Vec<String> = sqlx::query(
                 r#"
-                SELECT
-                    CONCAT('COMMENT ON ',
-                        CASE
-                            WHEN c.column_name IS NOT NULL THEN
-                                CONCAT('COLUMN ', t.table_name, '.', c.column_name)
-                            ELSE
-                                CONCAT('TABLE ', t.table_name)
-                        END,
-                        ' IS ', c.column_comment, ';') AS sql
-                FROM
-                    information_schema.tables t
-                LEFT JOIN
-                    information_schema.columns c ON t.table_name = c.table_name AND t.table_schema = c.table_schema
-                WHERE
-                    t.table_schema = DATABASE()
-                    AND (c.column_comment IS NOT NULL OR t.table_comment IS NOT NULL)
-                ORDER BY
-                    t.table_name, c.ordinal_position;
+                SELECT 
+                    CONCAT(
+                        CASE 
+                            WHEN TABLE_COMMENT IS NOT NULL THEN 
+                                CONCAT('ALTER TABLE ', TABLE_NAME, ' COMMENT = ''', TABLE_COMMENT, ''';')
+                            ELSE 
+                                CONCAT('ALTER TABLE ', TABLE_NAME, ' MODIFY COLUMN ', COLUMN_NAME, ' COMMENT ''', COLUMN_COMMENT, ''';')
+                        END
+                    ) AS comment_stmt
+                FROM 
+                    (
+                        SELECT TABLE_NAME, TABLE_COMMENT, NULL AS COLUMN_NAME, NULL AS COLUMN_COMMENT
+                        FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_SCHEMA = ? AND (TABLE_COMMENT IS NOT NULL OR TABLE_COMMENT != '')
+                        UNION ALL
+                        SELECT TABLE_NAME, NULL, COLUMN_NAME, COLUMN_COMMENT
+                        FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_SCHEMA = ? AND (COLUMN_COMMENT IS NOT NULL OR COLUMN_COMMENT != '')
+                    ) AS comments;
                 "#,
             )
-            .map(|row: MySqlRow| row.get("sql"))
+            .bind(&self.db_name)
+            .bind(&self.db_name)
+            .map(|row: MySqlRow| row.get("comment_stmt"))
             .fetch_all(&mut self.db)
             .await?;
 
