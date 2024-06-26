@@ -1,12 +1,13 @@
 use crate::database_drivers::DatabaseDriver;
-use anyhow::Result;
+use anyhow::{bail, Result};
+use clickhouse::Client;
+use url::{Host, Url};
 
 use std::future::Future;
 use std::pin::Pin;
 
 pub struct ClickhouseDriver {
-    db: String,
-    path: String,
+    db: Client,
     migrations_table: String,
     migrations_folder: String,
     schema_file: String,
@@ -19,7 +20,29 @@ impl<'a> ClickhouseDriver {
         migrations_folder: String,
         schema_file: String,
     ) -> Result<ClickhouseDriver> {
-        todo!()
+        let url = if let Ok(u) = Url::parse(db_url) {
+            u
+        } else {
+            bail!("Invalid url");
+        };
+
+        let client = Client::default()
+            .with_url(format!(
+                "{}://{}:{}",
+                url.scheme(),
+                url.host().unwrap_or(Host::Domain("localhost")),
+                url.port().unwrap_or(8443)
+            ))
+            .with_user("name")
+            .with_password("123")
+            .with_database("test");
+
+        Ok(ClickhouseDriver {
+            db: client,
+            migrations_folder,
+            migrations_table,
+            schema_file,
+        })
     }
 }
 
