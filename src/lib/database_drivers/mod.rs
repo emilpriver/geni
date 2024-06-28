@@ -146,6 +146,17 @@ pub async fn new(
             .await?;
             Ok(Box::new(driver))
         }
+        "clickhouse" => {
+            let driver = clickhouse::ClickhouseDriver::new(
+                parsed_db_url.as_str(),
+                migrations_table,
+                migrations_folder,
+                schema_file,
+            )
+            .await?;
+
+            Ok(Box::new(driver))
+        }
         _ => bail!("Unsupported database driver: {}", scheme),
     }
 }

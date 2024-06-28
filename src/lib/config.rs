@@ -6,6 +6,7 @@ pub enum Database {
     MariaDB,
     MySQL,
     SQLite,
+    Clickhouse,
 }
 
 #[allow(dead_code)]
@@ -17,6 +18,7 @@ impl Database {
             "mariadb" => Ok(Database::MariaDB),
             "mysql" => Ok(Database::MySQL),
             "sqlite" | "sqlite3" => Ok(Database::SQLite),
+            "clickhouse" => Ok(Database::Clickhouse),
             _ => bail!("Unknown database driver"),
         }
     }
@@ -28,6 +30,7 @@ impl Database {
             Database::MariaDB => Ok("mariadb"),
             Database::MySQL => Ok("mysql"),
             Database::SQLite => Ok("sqlite"),
+            Database::Clickhouse => Ok("clickhouse"),
         }
     }
 }

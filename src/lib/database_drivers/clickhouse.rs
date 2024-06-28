@@ -1,6 +1,7 @@
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
-use clickhouse::Client;
+use clickhouse::{Client, Row};
+use serde::Deserialize;
 use url::{Host, Url};
 
 use std::future::Future;
@@ -26,16 +27,41 @@ impl<'a> ClickhouseDriver {
             bail!("Invalid url");
         };
 
-        let client = Client::default()
-            .with_url(format!(
-                "{}://{}:{}",
-                url.scheme(),
-                url.host().unwrap_or(Host::Domain("localhost")),
-                url.port().unwrap_or(8443)
-            ))
-            .with_user("name")
-            .with_password("123")
-            .with_database("test");
+        let database = if let Some(first_part) =
+            url.path_segments().and_then(|mut segments| segments.next())
+        {
+            first_part
+        } else {
+            ""
+        };
+
+        let new_url = format!(
+            "http://{}:{}",
+            url.host().unwrap_or(Host::Domain("localhost")),
+            url.port().unwrap_or(8443)
+        );
+        println!("{}", new_url);
+
+        let mut client = Client::default().with_url(new_url).with_database(database);
+
+        let user = url.username();
+        let password = url.password();
+
+        if let (u, Some(p)) = (user, password) {
+            println!("{}", u);
+            println!("{}", p);
+            client = client.with_user(u).with_password(p);
+        }
+
+        #[derive(Row, Deserialize)]
+        struct MyRow {
+            field: String,
+        }
+
+        let mut cursor = client.query("SELECT 1").fetch::<MyRow>()?;
+        while let Some(row) = cursor.next().await? {
+            println!("{}", row.field);
+        }
 
         Ok(ClickhouseDriver {
             db: client,
