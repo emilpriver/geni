@@ -176,10 +176,7 @@ impl DatabaseDriver for SqliteDriver {
                             .to_string()
                             .replace("\\n", "\n"),
                     );
-                    continue;
                 }
-
-                break;
             }
 
             let final_schema = schemas.join("\n");
