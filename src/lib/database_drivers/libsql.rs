@@ -196,10 +196,7 @@ impl DatabaseDriver for LibSQLDriver {
                             .to_string()
                             .replace("\\n", "\n"),
                     );
-                    continue;
                 }
-
-                break;
             }
 
             let final_schema = schemas.join("\n");
