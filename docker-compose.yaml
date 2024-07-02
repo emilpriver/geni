@@ -31,3 +31,13 @@ services:
       MYSQL_PASSWORD: password
     ports:
       - "3307:3306"
+  clickhouse:
+    image: bitnami/clickhouse:latest
+    container_name: clickhouse
+    hostname: clickhouse
+    environment:
+      CLICKHOUSE_ADMIN_PASSWORD: password
+      CLICKHOUSE_ADMIN_USER: user
+    ports:
+      - '8123:8123'
+      - '9000:9000'
