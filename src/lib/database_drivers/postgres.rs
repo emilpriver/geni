@@ -286,7 +286,7 @@ impl DatabaseDriver for PostgresDriver {
 
             let constraints: Vec<String> = sqlx::query(
                 r#"
-                SELECT 
+                SELECT DISTINCT
                     CASE 
                         WHEN tc.constraint_type = 'PRIMARY KEY' THEN 
                             'ALTER TABLE ' || tc.table_name || 
@@ -305,7 +305,9 @@ impl DatabaseDriver for PostgresDriver {
                             'ALTER TABLE ' || tc.table_name || 
                             ' ADD CONSTRAINT ' || tc.constraint_name || 
                             ' CHECK (' || cc.check_clause || ');'
-                    END AS sql
+                    END AS sql,
+                    tc.table_name, 
+                    tc.constraint_name
                 FROM 
                     information_schema.table_constraints tc
                 JOIN 
@@ -318,7 +320,7 @@ impl DatabaseDriver for PostgresDriver {
                     tc.table_schema = 'public'
                 ORDER BY 
                     tc.table_name, 
-                    tc.constraint_name;
+                    tc.constraint_name
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
