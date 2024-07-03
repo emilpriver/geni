@@ -9,6 +9,7 @@ mod tests {
     use anyhow::Ok;
     use anyhow::Result;
     use chrono::Utc;
+    use std::env;
     use std::fs;
     use std::io::Write;
     use std::path::Path;
@@ -86,6 +87,9 @@ mod tests {
 
         let database_wait_timeout = 30;
 
+        let database_schema_file =
+            env::var("DATABASE_SCHEMA_FILE").unwrap_or("schema.sql".to_string());
+
         generate_test_migrations(migration_folder_string.to_string()).unwrap();
 
         let mut create_client = database_drivers::new(
@@ -93,7 +97,7 @@ mod tests {
             None,
             "schema_migrations".to_string(),
             migration_folder_string.clone(),
-            "schema.sql".to_string(),
+            database_schema_file.clone(),
             Some(database_wait_timeout),
             false,
         )
@@ -112,7 +116,7 @@ mod tests {
             None,
             "schema_migrations".to_string(),
             migration_folder_string.clone(),
-            "schema.sql".to_string(),
+            database_schema_file.clone(),
             Some(database_wait_timeout),
             true,
         )
@@ -124,7 +128,7 @@ mod tests {
             None,
             "schema_migrations".to_string(),
             migration_folder_string.clone(),
-            "schema.sql".to_string(),
+            database_schema_file.clone(),
             Some(database_wait_timeout),
             true,
         )
@@ -145,7 +149,7 @@ mod tests {
             None,
             "schema_migrations".to_string(),
             migration_folder_string.clone(),
-            "schema.sql".to_string(),
+            database_schema_file.clone(),
             Some(database_wait_timeout),
             false,
             &1,
@@ -167,7 +171,7 @@ mod tests {
             None,
             "schema_migrations".to_string(),
             migration_folder_string.clone(),
-            "schema.sql".to_string(),
+            database_schema_file.clone(),
             Some(database_wait_timeout),
             false,
             &3,
@@ -184,8 +188,9 @@ mod tests {
             2
         );
 
-        let schema_dump_file = format!("{}/schema.sql", migration_folder_string);
-        assert!(Path::new(&schema_dump_file).exists());
+        let schema_dump_file = format!("{}/{}", migration_folder_string, database_schema_file);
+        let file = Path::new(&schema_dump_file);
+        assert!(file.exists());
 
         Ok(())
     }
@@ -193,6 +198,7 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_libsql() -> Result<()> {
+        env::set_var("DATABASE_SCHEMA_FILE", "libsql_schema.sql");
         let url = "http://localhost:6000";
         test_migrate(Database::LibSQL, url).await
     }
@@ -200,6 +206,7 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_postgres() -> Result<()> {
+        env::set_var("DATABASE_SCHEMA_FILE", "postgres_schema.sql");
         let url = "psql://postgres:mysecretpassword@localhost:6437/app?sslmode=disable";
         test_migrate(Database::Postgres, url).await
     }
@@ -207,6 +214,7 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_mysql() -> Result<()> {
+        env::set_var("DATABASE_SCHEMA_FILE", "mysql_schema.sql");
         let url = "mysql://root:password@localhost:3306/app";
         test_migrate(Database::MySQL, url).await
     }
@@ -214,6 +222,7 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_maria() -> Result<()> {
+        env::set_var("DATABASE_SCHEMA_FILE", "maria_schema.sql");
         let url = "mariadb://root:password@localhost:3307/app";
         test_migrate(Database::MariaDB, url).await
     }
@@ -221,6 +230,7 @@ mod tests {
     #[test]
     #[serial]
     async fn test_migrate_sqlite() -> Result<()> {
+        env::set_var("DATABASE_SCHEMA_FILE", "sqlite_schema.sql");
         let tmp_dir = tempdir::TempDir::new("temp_migrate_sqlite_db").unwrap();
         let migration_folder = tmp_dir.path();
         let migration_folder_string = migration_folder.to_str().unwrap();

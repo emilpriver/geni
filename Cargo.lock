@@ -781,7 +781,7 @@ dependencies = [
 
 [[package]]
 name = "geni"
-version = "1.0.10"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "async-trait",

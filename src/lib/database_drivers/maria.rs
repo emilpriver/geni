@@ -276,7 +276,7 @@ impl DatabaseDriver for MariaDBDriver {
 
             let constraints: Vec<String> = sqlx::query(
                 r#"
-                    SELECT 
+                    SELECT DISTINCT
                         CONCAT(
                             'ALTER TABLE ', 
                             TABLE_NAME, 
