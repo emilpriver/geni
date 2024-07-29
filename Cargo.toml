@@ -36,7 +36,7 @@ serde_json = "1.0.120"
 serial_test = "3.1.1"
 simplelog = "0.12.2"
 tokio = { version = "1.38.1", features = ["full"] }
-sqlx = { version = "0.7.3",  features = ["runtime-tokio", "chrono", "postgres", "mysql", "time"] }
+sqlx = { version = "0.8.0",  features = ["runtime-tokio", "chrono", "postgres", "mysql", "time"] }
 url = { version = "2.5.0", features = ["serde"] }
 which = "6.0.1"
 regex = "1.10.5"
