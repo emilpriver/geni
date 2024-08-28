@@ -80,8 +80,8 @@ pub struct GeniConfig {
 
 pub fn load_config_file(project_name: &str) -> Result<GeniConfig> {
     let file_path = "./geni.toml";
-    if !Path::new(file_path).exists() {
-        return bail!("{} don't exist", file_path);
+    if Path::new(file_path).try_exists().is_err() {
+        bail!("{} don't exist", file_path);
     }
 
     let contents = fs::read_to_string(file_path)?;
@@ -94,7 +94,9 @@ pub fn load_config_file(project_name: &str) -> Result<GeniConfig> {
                 let mut values_iter = v.iter();
                 match values_iter.find(|p| p.0 == "database_url") {
                     Some((_, database_url)) => {
-                        let database_token = values_iter.find(|p| p.0 == "database_url").map(|(_, dt)| dt.to_string());
+                        let database_token = values_iter
+                            .find(|p| p.0 == "database_url")
+                            .map(|(_, dt)| dt.to_string());
                         Ok(GeniConfig {
                             database_url: database_url.to_string(),
                             database_token,
