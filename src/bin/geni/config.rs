@@ -1,7 +1,5 @@
-use anyhow::{anyhow, bail, Result};
-use libsql::Error;
-use serde::Deserialize;
-use std::{collections::HashMap, env, fs, path::Path};
+use anyhow::{bail, Result};
+use std::{env, fs, path::Path};
 
 pub fn migration_folder() -> String {
     if let Ok(v) = env::var("DATABASE_MIGRATIONS_FOLDER") {
@@ -96,10 +94,7 @@ pub fn load_config_file(project_name: &str) -> Result<GeniConfig> {
                 let mut values_iter = v.iter();
                 match values_iter.find(|p| p.0 == "database_url") {
                     Some((_, database_url)) => {
-                        let database_token = match values_iter.find(|p| p.0 == "database_url") {
-                            Some((_, dt)) => Some(dt.to_string()),
-                            None => None,
-                        };
+                        let database_token = values_iter.find(|p| p.0 == "database_url").map(|(_, dt)| dt.to_string());
                         Ok(GeniConfig {
                             database_url: database_url.to_string(),
                             database_token,

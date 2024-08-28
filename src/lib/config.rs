@@ -8,6 +8,7 @@ pub enum Database {
     SQLite,
 }
 
+#[allow(dead_code)]
 impl Database {
     pub fn new(s: &str) -> Result<Database> {
         match s {
