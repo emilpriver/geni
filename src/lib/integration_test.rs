@@ -2,8 +2,10 @@
 mod tests {
     use crate::config::Database;
     use crate::database_drivers;
+    use anyhow::bail;
     use log::info;
     use serial_test::serial;
+    use sqlx::database;
 
     use crate::migrate::{down, up};
     use anyhow::Ok;
@@ -243,5 +245,116 @@ mod tests {
         let url = format!("sqlite://{}", path.to_str().unwrap());
 
         test_migrate(Database::SQLite, &url).await
+    }
+
+    #[test]
+    #[serial]
+    async fn test_migrate_failure() -> Result<()> {
+        env::set_var("DATABASE_SCHEMA_FILE", "sqlite_schema.sql");
+        let tmp_dir = tempdir::TempDir::new("temp_migrate_sqlite_db").unwrap();
+        let migration_folder = tmp_dir.path();
+        let migration_folder_string = migration_folder.to_str().unwrap();
+        let filename = format!("{migration_folder_string}/test.sqlite");
+        let filename_str = filename.as_str();
+        let path = std::path::Path::new(filename_str);
+
+        File::create(path).unwrap();
+
+        let url = format!("sqlite://{}", path.to_str().unwrap());
+        let tmp_dir = tempdir::TempDir::new(
+            format!("test_migrate_{}", Database::SQLite.as_str().unwrap()).as_str(),
+        )
+        .unwrap();
+        let migration_folder = tmp_dir.path();
+        let migration_folder_string = migration_folder.to_str().unwrap().to_string();
+
+        let database_wait_timeout = 30;
+
+        let database_schema_file =
+            env::var("DATABASE_SCHEMA_FILE").unwrap_or("schema.sql".to_string());
+
+        let file_endings = vec!["up", "down"];
+        let test_queries = [(
+            r#"
+                    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+                    CREATE OR REPLACE FUNCTION uuid_generate_v7()
+                    RETURN uuid
+                    AS $$
+                    SELECT encode(
+                        set_bit(
+                        set_bit(
+                            overlay(uuid_send(gen_random_uuid())
+                                    placing substring(int8send(floor(extract(epoch from clock_timestamp()) * 1000)::bigint) from 3)
+                                    from 1 for 6
+                            ),
+                            52, 1
+                        ),
+                        53, 1
+                        ),
+                        'hex')::uuid;
+                    $$
+                    LANGUAGE SQL
+                    VOLATILE;
+
+                    CREATE TABLE tokens (
+                        id UUID NOT NULL DEFAULT uuid_generate_v7 ()
+                        token TEXT NOT NULL UNIQUE,
+                        app_id UUID NOT NULL,
+                        app_slug TEXT NOT NULL,
+                        expires_at TIMESTAMP,
+                        updated_at TIMESTAMP WITH TIME ZONE,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE permissions (
+                        id UUID NOT NULL DEFAULT uuid_generate_v7 ()
+                        token UUID NOT NULL,
+                        updated_at TIMESTAMP WITH TIME ZONE,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    );
+                "#,
+            "",
+        )];
+
+        for (index, t) in test_queries.iter().enumerate() {
+            for f in &file_endings {
+                let timestamp = Utc::now().timestamp() + index as i64;
+
+                let filename =
+                    format!("{migration_folder_string}/{timestamp}_{index}_test.{f}.sql");
+                let filename_str = filename.as_str();
+                let path = std::path::Path::new(filename_str);
+
+                // Generate the folder if it don't exist
+                if let Some(parent) = path.parent() {
+                    fs::create_dir_all(parent).unwrap()
+                }
+
+                let mut file = File::create(path).unwrap();
+
+                match *f {
+                    "up" => file.write_all(t.0.as_bytes()).unwrap(),
+                    "down" => file.write_all(t.1.as_bytes()).unwrap(),
+                    _ => {}
+                }
+
+                info!("Generated {}", filename_str)
+            }
+        }
+
+        let u = up(
+            url.clone(),
+            None,
+            "schema_migrations".to_string(),
+            migration_folder_string.clone(),
+            database_schema_file.clone(),
+            Some(database_wait_timeout),
+            true,
+        )
+        .await;
+        assert!(u.is_err());
+
+        Ok(())
     }
 }
