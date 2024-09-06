@@ -1,4 +1,4 @@
-FROM rust:1.75.0-alpine3.19 as builder
+FROM rust:1.80.0-alpine3.19 as builder
 WORKDIR /usr/src/app
 COPY . .
 
@@ -13,7 +13,7 @@ COPY --from=builder /usr/src/app/geni /usr/src/app/geni
 
 ENV DATABASE_MIGRATIONS_FOLDER="/migrations"
 
-LABEL org.opencontainers.image.description "Geni: Standalone database migration tool which works for Postgres, MariaDB, MySQL, Sqlite and LibSQL(Turso)."
+LABEL org.opencontainers.image.description="Geni: Standalone database migration tool which works for Postgres, MariaDB, MySQL, Sqlite and LibSQL(Turso)."
 
 WORKDIR /usr/src/app
 
