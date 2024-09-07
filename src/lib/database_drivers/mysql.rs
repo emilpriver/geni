@@ -1,6 +1,6 @@
 use crate::database_drivers::{utils, DatabaseDriver};
 use anyhow::{bail, Result};
-use log::{error, info};
+use log::info;
 
 use sqlx::mysql::MySqlRow;
 use sqlx::Executor;
@@ -237,7 +237,7 @@ impl DatabaseDriver for MySQLDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if tables.len() > 0 {
+            if !tables.is_empty() {
                 schema.push_str("-- TABLES \n\n");
                 for ele in tables.iter() {
                     schema.push_str(ele.as_str());
@@ -266,7 +266,7 @@ impl DatabaseDriver for MySQLDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if views.len() > 0 {
+            if !views.is_empty() {
                 schema.push_str("-- VIEWS \n\n");
                 for ele in views.iter() {
                     schema.push_str(ele.as_str());
@@ -348,7 +348,7 @@ impl DatabaseDriver for MySQLDriver {
                 .fetch_all(&mut self.db)
                 .await?;
 
-            if constraints.len() > 0 {
+            if !constraints.is_empty() {
                 schema.push_str("-- CONSTRAINTS \n\n");
                 for ele in constraints.iter() {
                     schema.push_str(ele.as_str());
@@ -383,7 +383,7 @@ impl DatabaseDriver for MySQLDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if indexes.len() > 0 {
+            if !indexes.is_empty() {
                 schema.push_str("-- INDEXES \n\n");
                 for ele in indexes.iter() {
                     schema.push_str(ele.as_str());
@@ -420,7 +420,7 @@ impl DatabaseDriver for MySQLDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if comments.len() > 0 {
+            if !comments.is_empty() {
                 schema.push_str("-- COMMENTS \n\n");
                 for ele in comments.iter() {
                     schema.push_str(ele.as_str());

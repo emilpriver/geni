@@ -57,10 +57,7 @@ pub async fn up(
             let query = read_file_content(&f.1);
             let run_in_transaction = utils::should_run_in_transaction(&query);
 
-            match database.execute(&query, run_in_transaction).await {
-                Err(e) => bail!(e),
-                _ => (),
-            }
+            if let Err(e) = database.execute(&query, run_in_transaction).await { bail!(e) }
 
             database.insert_schema_migration(&id).await?;
         }
@@ -130,10 +127,7 @@ pub async fn down(
                 let query = read_file_content(&f.1);
                 let run_in_transaction = utils::should_run_in_transaction(&query);
 
-                match database.execute(&query, run_in_transaction).await {
-                    Err(e) => bail!(e),
-                    _ => (),
-                }
+                if let Err(e) = database.execute(&query, run_in_transaction).await { bail!(e) }
 
                 database
                     .remove_schema_migration(migration.to_string().as_str())

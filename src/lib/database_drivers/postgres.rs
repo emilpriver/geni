@@ -1,6 +1,6 @@
 use crate::database_drivers::DatabaseDriver;
 use anyhow::{bail, Result};
-use log::{error, info};
+use log::info;
 use sqlx::postgres::PgRow;
 use sqlx::Executor;
 use sqlx::{Connection, PgConnection, Row};
@@ -216,7 +216,7 @@ impl DatabaseDriver for PostgresDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if extensions.len() > 0 {
+            if !extensions.is_empty() {
                 schema.push_str("-- EXTENSIONS \n\n");
                 for ele in extensions.iter() {
                     schema.push_str(ele.as_str());
@@ -252,7 +252,7 @@ impl DatabaseDriver for PostgresDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if tables.len() > 0 {
+            if !tables.is_empty() {
                 schema.push_str("-- TABLES \n\n");
                 for ele in tables.iter() {
                     schema.push_str(ele.as_str());
@@ -276,7 +276,7 @@ impl DatabaseDriver for PostgresDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if views.len() > 0 {
+            if !views.is_empty() {
                 schema.push_str("-- VIEWS \n\n");
                 for ele in views.iter() {
                     schema.push_str(ele.as_str());
@@ -327,7 +327,7 @@ impl DatabaseDriver for PostgresDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if constraints.len() > 0 {
+            if !constraints.is_empty() {
                 schema.push_str("-- CONSTRAINTS \n\n");
                 for ele in constraints.iter() {
                     schema.push_str(ele.as_str());
@@ -351,7 +351,7 @@ impl DatabaseDriver for PostgresDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if indexes.len() > 0 {
+            if !indexes.is_empty() {
                 schema.push_str("-- INDEXES \n\n");
                 for ele in indexes.iter() {
                     schema.push_str(ele.as_str());
@@ -381,7 +381,7 @@ impl DatabaseDriver for PostgresDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if sequences.len() > 0 {
+            if !sequences.is_empty() {
                 schema.push_str("-- SEQUENCES \n\n");
                 for ele in sequences.iter() {
                     schema.push_str(ele.as_str());
@@ -423,7 +423,7 @@ impl DatabaseDriver for PostgresDriver {
             .fetch_all(&mut self.db)
             .await?;
 
-            if comments.len() > 0 {
+            if !comments.is_empty() {
                 schema.push_str("-- COMMENTS \n\n");
                 for ele in comments.iter() {
                     schema.push_str(ele.as_str());
