@@ -84,8 +84,8 @@ impl DatabaseDriver for MySQLDriver {
                         tx.commit().await?;
                     }
                     Err(e) => {
-                        error!("Error executing query: {}", e);
                         tx.rollback().await?;
+                        bail!(e);
                     }
                 }
                 return Ok(());
