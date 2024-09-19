@@ -181,13 +181,13 @@ impl DatabaseDriver for SqliteDriver {
             let mut schemas: Vec<String> = vec![];
             while let Some(row) = result.next().await.unwrap_or(None) {
                 if let Ok(r) = row.get_str(0) {
-                    schemas.push(
-                        r.to_string()
-                            .trim_start_matches('"')
-                            .trim_end_matches('"')
-                            .to_string()
-                            .replace("\\n", "\n"),
-                    );
+                    let text = r
+                        .to_string()
+                        .trim_start_matches('"')
+                        .trim_end_matches('"')
+                        .to_string()
+                        .replace("\\n", "\n");
+                    schemas.push(format!("{};", text));
                 }
             }
 
