@@ -1164,9 +1164,9 @@ checksum = "4ec2a862134d2a7d32d7983ddcdd1c4923530833c9f2ea1a44fc5fa473989058"
 
 [[package]]
 name = "libsql"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc44962384bd2223269a81cd0d4a1683182b7bf0408b1d87e731c43e8c501270"
+checksum = "fe18646e4ef8db446bc3e3f5fb96131483203bc5f4998ff149f79a067530c01c"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1202,9 +1202,9 @@ dependencies = [
 
 [[package]]
 name = "libsql-ffi"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "906c4fcdba5bced1c034507aeb06fe3082c5674c4199fd850884de5d633b2446"
+checksum = "5f2a50a585a1184a43621a9133b7702ba5cb7a87ca5e704056b19d8005de6faf"
 dependencies = [
  "bindgen",
  "cc",
@@ -1224,9 +1224,9 @@ dependencies = [
 
 [[package]]
 name = "libsql-rusqlite"
-version = "0.32.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b811f72e13b9864601197d234621ffe89a490b2cb034cf28753b111334cf1db3"
+checksum = "ae65c66088dcd309abbd5617ae046abac2a2ee0a7fdada5127353bd68e0a27ea"
 dependencies = [
  "bitflags 2.6.0",
  "fallible-iterator 0.2.0",
@@ -1256,9 +1256,9 @@ dependencies = [
 
 [[package]]
 name = "libsql-sys"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce92e8edf5a0dc928c6031ff3cf05794a23570b417254a7f3883b2072ae3b3c3"
+checksum = "5c05b61c226781d6f5e26e3e7364617f19c0c1d5332035802e9229d6024cec05"
 dependencies = [
  "bytes",
  "libsql-ffi",
@@ -1270,9 +1270,9 @@ dependencies = [
 
 [[package]]
 name = "libsql_replication"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b107ff45254e35e1b72586ddff84cc4ebaede1e1a59f88bf2a0371321d23f7ae"
+checksum = "9cf40c4c2c01462da758272976de0a23d19b4e9c714db08efecf262d896655b5"
 dependencies = [
  "aes",
  "async-stream",
@@ -2683,17 +2683,12 @@ dependencies = [
  "percent-encoding",
  "pin-project",
  "prost",
- "rustls-native-certs",
- "rustls-pemfile",
- "rustls-pki-types",
  "tokio",
- "tokio-rustls",
  "tokio-stream",
  "tower",
  "tower-layer",
  "tower-service",
  "tracing",
- "webpki-roots",
 ]
 
 [[package]]
