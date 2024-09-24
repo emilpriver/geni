@@ -40,7 +40,7 @@ sqlx = { version = "0.8.2",  features = ["runtime-tokio", "chrono", "postgres", 
 url = { version = "2.5.0", features = ["serde"] }
 which = "6.0.3"
 regex = "1.10.6"
-libsql = "0.5.0"
+libsql = "0.6.0"
 
 [dev-dependencies]
 mockall = "0.13.0"
