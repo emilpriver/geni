@@ -1,5 +1,7 @@
-use anyhow::{bail, Result};
-use std::env;
+use anyhow::{anyhow, bail, Result};
+use libsql::Error;
+use serde::Deserialize;
+use std::{collections::HashMap, env, fs, path::Path};
 
 pub fn migration_folder() -> String {
     if let Ok(v) = env::var("DATABASE_MIGRATIONS_FOLDER") {
@@ -71,4 +73,43 @@ pub fn migrations_table() -> String {
     }
 
     "schema_migrations".to_string()
+}
+
+pub struct GeniConfig {
+    pub database_url: String,
+    pub database_token: Option<String>,
+}
+
+pub fn load_config_file(project_name: &str) -> Result<GeniConfig> {
+    let file_path = "./geni.toml";
+    if !Path::new(file_path).exists() {
+        return bail!("{} don't exist", file_path);
+    }
+
+    let contents = fs::read_to_string(file_path)?;
+    let config: toml::Table = toml::from_str(contents.as_str())?;
+    let project = config.iter().find(|p| p.0 == project_name);
+
+    match project {
+        Some((_, values)) => match values.as_table() {
+            Some(v) => {
+                let mut values_iter = v.iter();
+                match values_iter.find(|p| p.0 == "database_url") {
+                    Some((_, database_url)) => {
+                        let database_token = match values_iter.find(|p| p.0 == "database_url") {
+                            Some((_, dt)) => Some(dt.to_string()),
+                            None => None,
+                        };
+                        Ok(GeniConfig {
+                            database_url: database_url.to_string(),
+                            database_token,
+                        })
+                    }
+                    None => bail!("didn't database_url for project {}", project_name),
+                }
+            }
+            None => bail!("didn't find config for {}", project_name),
+        },
+        None => bail!("didn't find config for {}", project_name),
+    }
 }
