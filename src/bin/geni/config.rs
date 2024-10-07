@@ -108,37 +108,39 @@ pub fn load_config_file(project_name: &str) -> Result<GeniConfig> {
                 let mut values_iter = v.iter();
                 match values_iter.find(|p| p.0 == "database_url") {
                     Some((_, database_url)) => {
-                        let mut database_token = values_iter
+                        let mut database_token = v
+                            .iter()
                             .find(|p| p.0 == "database_token")
                             .map(|(_, dt)| dt.to_string());
 
-                        let database_url_as_string = database_url.to_string();
+                        let database_url_as_string = clean_string(database_url.to_string());
                         let cleaned_url = match database_url_as_string.starts_with("env:") {
-                            true => clean_string(database_url_as_string),
-                            false => {
+                            true => {
                                 if let Some(without_prefix) =
                                     database_url_as_string.strip_prefix("env:")
                                 {
                                     env::var(without_prefix)?
                                 } else {
-                                    clean_string(database_url_as_string)
+                                    database_url_as_string
                                 }
                             }
+                            false => database_url_as_string,
                         };
 
                         if let Some(database_token_exists) = database_token {
-                            let database_token_as_string = database_token_exists.to_string();
+                            let database_token_as_string =
+                                clean_string(database_token_exists.to_string());
                             let cleaned_token = match database_token_as_string.starts_with("env:") {
-                                true => clean_string(database_token_as_string),
-                                false => {
+                                true => {
                                     if let Some(without_prefix) =
                                         database_token_as_string.strip_prefix("env:")
                                     {
                                         env::var(without_prefix)?
                                     } else {
-                                        clean_string(database_token_as_string)
+                                        database_token_as_string
                                     }
                                 }
+                                false => database_token_as_string,
                             };
                             database_token = Some(cleaned_token)
                         }
