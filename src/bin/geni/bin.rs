@@ -21,6 +21,14 @@ async fn main() {
         .arg_required_else_help(true)
         .name("geni")
         .author(crate_authors!())
+        .arg(
+            Arg::new("project")
+                .short('p')
+                .long("project")
+                .help("The project in geni.toml to use")
+                .action(ArgAction::Set)
+                .num_args(0..=1),
+        )
         .subcommands([
             Command::new("new")
                 .about("Create new migration")
@@ -59,7 +67,29 @@ async fn main() {
     let schema_file = config::schema_file();
     let dump_schema = config::dump_schema_file();
 
-    let database_token = config::database_token();
+    let (database_url, database_token) = match matches.get_one::<String>("project") {
+        Some(project) => match config::load_config_file(project) {
+            Ok(p) => (p.database_url, p.database_token),
+            Err(e) => {
+                error!("Failed to load config file: {}", e);
+                return;
+            }
+        },
+        None => {
+            let token = config::database_token();
+            let url = match config::database_url() {
+                Ok(url) => url,
+                Err(..) => {
+                    error!(
+                        "No database url found, please set the DATABASE_URL environment variable"
+                    );
+                    return;
+                }
+            };
+
+            (url, token)
+        }
+    };
 
     match matches.subcommand() {
         Some(("new", query_matches)) => {
@@ -73,16 +103,6 @@ async fn main() {
             };
         }
         Some(("create", ..)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
-            };
-
             match geni::create_database(
                 database_url,
                 database_token,
@@ -101,16 +121,6 @@ async fn main() {
             };
         }
         Some(("drop", ..)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
-            };
-
             match geni::drop_database(
                 database_url,
                 database_token,
@@ -129,16 +139,6 @@ async fn main() {
             };
         }
         Some(("up", ..)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
-            };
-
             match geni::migrate_database(
                 database_url,
                 database_token,
@@ -158,15 +158,6 @@ async fn main() {
             };
         }
         Some(("down", query_matches)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
-            };
             let rollback_amount = query_matches
                 .get_one::<String>("amount")
                 .unwrap_or(&"1".to_string())
@@ -193,16 +184,6 @@ async fn main() {
             };
         }
         Some(("status", query_matches)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
-            };
-
             let verbose = query_matches.contains_id("verbose");
 
             if let Err(err) = geni::status_migrations(
@@ -221,16 +202,6 @@ async fn main() {
             }
         }
         Some(("dump", ..)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
-            };
-
             match geni::dump_database(
                 database_url,
                 database_token,

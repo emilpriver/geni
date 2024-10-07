@@ -3,7 +3,6 @@ use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::pin::Pin;
-use std::usize;
 
 pub mod libsql;
 pub mod maria;
