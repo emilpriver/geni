@@ -38,7 +38,7 @@ simplelog = "0.12.2"
 tokio = { version = "1.41.0", features = ["full"] }
 sqlx = { version = "0.8.2",  features = ["runtime-tokio", "chrono", "postgres", "mysql", "time"] }
 url = { version = "2.5.0", features = ["serde"] }
-which = "6.0.3"
+which = "7.0.0"
 regex = "1.11.1"
 libsql = "0.6.0"
 
