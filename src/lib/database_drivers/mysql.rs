@@ -217,7 +217,9 @@ impl DatabaseDriver for MySQLDriver {
                                 '  ', COLUMN_NAME, ' ', COLUMN_TYPE,
                                 IF(IS_NULLABLE = 'NO', ' NOT NULL', ''),
                                 IF(COLUMN_DEFAULT IS NOT NULL, CONCAT(' DEFAULT ', COLUMN_DEFAULT), '')
-                            ) SEPARATOR', \n'
+                            ) 
+                            ORDER BY COLUMN_NAME ASC
+                            SEPARATOR', \n'
                         ),
                         '\n);'
                     ) AS create_table_stmt
@@ -258,7 +260,8 @@ impl DatabaseDriver for MySQLDriver {
                 FROM 
                     INFORMATION_SCHEMA.VIEWS
                 WHERE 
-                    TABLE_SCHEMA = ?;
+                    TABLE_SCHEMA = ?
+                ORDER BY TABLE_SCHEMA asc
                 "#,
             )
             .bind(&self.db_name)
@@ -336,9 +339,10 @@ impl DatabaseDriver for MySQLDriver {
                         WHERE 
                             TABLE_SCHEMA = ? 
                             AND REFERENCED_TABLE_NAME IS NOT NULL
+                        ORDER BY COLUMN_NAME asc
                         ) AS constraints
                     ORDER BY 
-                        TABLE_NAME;
+                        TABLE_NAME asc
                 "#,
                 )
                 .bind(&self.db_name)
@@ -375,7 +379,7 @@ impl DatabaseDriver for MySQLDriver {
                     GROUP BY 
                         TABLE_NAME, INDEX_NAME, COLUMN_NAME
                     ORDER BY 
-                        TABLE_NAME;
+                        TABLE_NAME, COLUMN_NAME asc
                 "#,
             )
             .bind(&self.db_name)
@@ -411,7 +415,8 @@ impl DatabaseDriver for MySQLDriver {
                         SELECT TABLE_NAME, NULL, COLUMN_NAME, COLUMN_COMMENT
                         FROM INFORMATION_SCHEMA.COLUMNS
                         WHERE TABLE_SCHEMA = ? AND (COLUMN_COMMENT IS NOT NULL OR COLUMN_COMMENT != '')
-                    ) AS comments;
+                    ) AS comments
+                ORDER BY TABLE_NAME, COLUMN_NAME
                 "#,
             )
             .bind(&self.db_name)
