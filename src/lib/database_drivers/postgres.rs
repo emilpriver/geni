@@ -209,7 +209,8 @@ impl DatabaseDriver for PostgresDriver {
                 FROM
                     pg_extension
                 WHERE
-                    (SELECT nspname FROM pg_namespace WHERE oid = extnamespace) = 'public';
+                    (SELECT nspname FROM pg_namespace WHERE oid = extnamespace) = 'public'
+                ORDER BY extname ASC
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
@@ -233,7 +234,7 @@ impl DatabaseDriver for PostgresDriver {
                                     THEN '(' || c.character_maximum_length || ')' 
                                     ELSE '' END) || 
                                 (CASE WHEN c.is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END), 
-                                E',\n ') || 
+                                E',\n ' ORDER BY c.column_name ASC) || 
                     E'\n);' AS sql
                 FROM 
                     information_schema.columns c
@@ -269,7 +270,7 @@ impl DatabaseDriver for PostgresDriver {
                 WHERE 
                     table_schema = 'public'
                 ORDER BY 
-                    table_name;
+                    table_name ASC
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
@@ -344,7 +345,7 @@ impl DatabaseDriver for PostgresDriver {
                 WHERE 
                     schemaname = 'public'
                 ORDER BY 
-                    indexname;
+                    indexname ASC;
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
@@ -374,7 +375,7 @@ impl DatabaseDriver for PostgresDriver {
                 WHERE 
                     sequence_schema = 'public'
                 ORDER BY 
-                    sequence_name;
+                    sequence_name ASC;
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
