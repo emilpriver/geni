@@ -43,7 +43,7 @@ regex = "1.11.1"
 libsql = "0.6.0"
 
 [dev-dependencies]
-mockall = "0.13.0"
+mockall = "0.13.1"
 tempfile = "3.13.0"
 tempdir = "0.3.7"
 
