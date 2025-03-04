@@ -27,7 +27,7 @@ path = "src/bin/geni/bin.rs"
 [dependencies]
 anyhow = "1.0.92"
 async-trait = "0.1.83"
-chrono = { version = "0.4.31", features = ["serde"] }
+chrono = { version = "0.4.40", features = ["serde"] }
 clap = { version = "4.5.27", features = ["env", "string", "derive", "cargo"] }
 futures = "0.3.31"
 serde = { version = "1.0.217", features = ["derive"] }
