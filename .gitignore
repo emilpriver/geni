@@ -8,3 +8,4 @@ example.db
 /tmp/
 scripts/migrations
 result
+geni.toml
