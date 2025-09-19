@@ -1,0 +1,71 @@
+# Cursor Rules for Geni
+
+## Purpose
+These rules guide AI-assisted development in this repository and define what files Cursor should load for context.
+
+## Project
+- Language: Rust
+- Binary entry: `src/bin/geni/`
+- Library code: `src/lib/`
+- Tooling: `cargo` (build/test/run), `make` (integration tests), `docker compose` (test DBs)
+
+## Development
+- Build: `cargo build`
+- Run CLI: `cargo run -- <command>` (e.g., `cargo run -- status`)
+- Unit tests: `cargo test`
+- Integration tests: `make test` (spins up Docker DBs)
+- Start test DBs: `docker compose up -d`
+- Stop test DBs: `docker compose down -v`
+
+## Database URLs for local testing
+- SQLite: `sqlite://temp.sqlite`
+- Postgres: `postgres://postgres:mysecretpassword@localhost:6437/development?sslmode=disable`
+- MySQL: `mysql://root:password@localhost:3306/app`
+- MariaDB: `mariadb://root:password@localhost:3307/app`
+- LibSQL: `http://localhost:6000`
+
+## Required/optional env vars
+- Required: `DATABASE_URL`
+- Optional: `DATABASE_TOKEN` (LibSQL/Turso), `DATABASE_MIGRATIONS_FOLDER`, `DATABASE_MIGRATIONS_TABLE`, `DATABASE_SCHEMA_FILE`, `DATABASE_WAIT_TIMEOUT` (default 30s), `DATABASE_NO_DUMP_SCHEMA`
+
+## Conventions
+- Use explicit absolute or `./relative` paths in shell commands (avoid bare names).
+- Prefer small, focused edits; keep unrelated changes out of the same commit.
+- Do not add new package managers or languages without discussion. If Node code exists, prefer `pnpm` and `bun` per workspace preferences.
+- Avoid long-lived processes in commands. Prefer one-shot commands in examples.
+
+## Git workflow
+- Default branch: `main`
+- Commit messages: concise, focus on the "why"; no config changes to user git settings.
+- Do not push to remote without explicit request.
+
+## Migration format (reference)
+- Timestamped files: `YYYYMMDDHHMMSS_name.up.sql` and `.down.sql`
+- `-- transaction:no` header disables transaction wrapping
+- Successful migrations can dump schema to `schema.sql` (unless disabled)
+
+## Cursor context
+include:
+  - "CLAUDE.md"
+  - "GEMINI.md"
+  - "CURSOR.md"
+  - "Cargo.toml"
+  - "Cargo.lock"
+  - "Makefile"
+  - "docker-compose.yml"
+  - "README.md"
+  - "LICENSE"
+  - "src/**"
+  - ".github/**"
+exclude:
+  - "target/**"
+  - "node_modules/**"
+  - "dist/**"
+  - ".git/**"
+  - ".idea/**"
+
+## Editor/AI guidance
+- Match existing Rust style and formatting; prioritize clarity and testability.
+- Keep comments minimal; explain "why" for complex code.
+- Add imports and dependencies needed to run code immediately.
+- Prefer additive changes over broad refactors unless requested.
