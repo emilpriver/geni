@@ -8,6 +8,9 @@ mod migrate;
 mod status;
 mod utils;
 
+#[cfg(test)]
+mod test_utils;
+
 pub async fn migrate_database(
     database_url: String,
     database_token: Option<String>,

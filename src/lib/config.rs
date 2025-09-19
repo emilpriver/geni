@@ -82,12 +82,22 @@ mod tests {
 
     #[test]
     fn test_database_roundtrip() {
-        // Test that we can create a Database and convert it back to string
-        let schemes = vec!["libsql", "postgres", "mariadb", "mysql", "sqlite"];
+        let schemes = vec![
+            ("https", "libsql"),
+            ("http", "libsql"),
+            ("libsql", "libsql"),
+            ("psql", "postgres"),
+            ("postgres", "postgres"),
+            ("postgresql", "postgres"),
+            ("mariadb", "mariadb"),
+            ("mysql", "mysql"),
+            ("sqlite", "sqlite"),
+            ("sqlite3", "sqlite"),
+        ];
 
-        for scheme in schemes {
+        for (scheme, expected) in schemes {
             let db = Database::new(scheme).unwrap();
-            assert_eq!(db.as_str().unwrap(), scheme);
+            assert_eq!(db.as_str().unwrap(), expected);
         }
     }
 }
