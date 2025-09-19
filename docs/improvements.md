@@ -42,6 +42,32 @@ This document tracks potential improvements for the Geni project.
 
 ## Code Quality Improvements
 
+### Refactoring Suggestions
+
+#### `status` module (`src/lib/status.rs`)
+
+*   **Refactor `status` function to accept `&mut dyn DatabaseDriver`:** The `status` function currently creates a `DatabaseDriver` instance internally, making it difficult to test in isolation. By refactoring it to accept a `&mut dyn DatabaseDriver` as an argument, we can easily pass a mock driver in our tests. This will improve testability and adhere to the Dependency Inversion Principle.
+
+#### `dump` module (`src/lib/dump.rs`)
+
+*   **Refactor `dump` function to accept `&mut dyn DatabaseDriver`:** Similar to the `status` function, the `dump` function should be refactored to accept a `&mut dyn DatabaseDriver`. This will enable unit testing with mocks and improve the overall testability of the module.
+*   **Add comprehensive error handling tests:** The existing tests only cover the case of an invalid database URL. More tests should be added to cover other failure scenarios, such as database connection errors, permission errors, and file system errors.
+*   **Improve schema validation:** The current tests only perform a superficial check of the dumped schema file. The validation should be improved to parse the schema and assert its structure or compare it against a known good schema.
+
+#### `utils` module (`src/lib/utils.rs`)
+
+*   **Add more comprehensive tests for `get_local_migrations`:** Add tests for more complex filename patterns, and for edge cases like a directory with a mix of valid and invalid migration filenames.
+*   **Improve error handling tests for `get_local_migrations`:** Add tests for the case where the path is not a directory, or where the user does not have permission to read the directory.
+*   **Improve tests for `read_file_content`:** Test for a `Result::Err` instead of a panic when the file does not exist. Add tests for other edge cases, such as a file with invalid UTF-8 content, or a file that the user does not have permission to read.
+
+#### `migrate` module (`src/lib/migrate.rs`)
+
+*   **Refactor `up` and `down` functions to improve testability:** The `up` and `down` functions should be refactored to accept a `&mut dyn DatabaseDriver` to allow for easier unit testing with mocks.
+*   **Add unit tests for `up` and `down` functions:** Use a mock `DatabaseDriver` to test the migration execution logic in isolation.
+*   **Add tests for transaction handling:** Add tests to ensure that migrations are correctly rolled back if they fail inside a transaction.
+*   **Add tests for rollback scenarios:** Add tests that actually execute a rollback and verify that the database is in the correct state afterward.
+*   **Add error handling for malformed migrations:** Add tests for how the `up` and `down` functions handle malformed migration files.
+
 ### Error Handling
 - [ ] Add property-based testing with `proptest` for edge cases
 - [ ] Replace generic `anyhow::Error` with more specific error types
