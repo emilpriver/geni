@@ -184,9 +184,9 @@ mod tests {
         let database_url = "psql://postgres:mysecretpassword@localhost:6437/app?sslmode=disable";
 
         // Setup test schema
-        if let Err(_) = setup_test_database_with_schema(database_url).await {
+        if let Err(e) = setup_test_database_with_schema(database_url).await {
             // Skip test if database is not available
-            println!("Skipping Postgres dump test - database not available");
+            log::info!("Skipping Postgres dump test - database not available: {}", e);
             return Ok(());
         }
 
