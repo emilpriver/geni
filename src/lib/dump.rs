@@ -168,8 +168,7 @@ mod tests {
         assert!(!schema_content.trim().is_empty(), "Schema file should not be empty");
 
         // Check for our test tables in the schema
-        assert!(schema_content.contains("test_users") || schema_content.contains("CREATE TABLE"),
-                "Schema should contain table definitions");
+        assert!(schema_content.contains("test_users"), "Schema should contain the 'test_users' table definition");
 
         Ok(())
     }
