@@ -125,4 +125,4 @@ This document tracks potential improvements for the Geni project.
 - [ ] Achieve >90% test coverage
 - [ ] Zero-panic guarantee in library code
 - [ ] Comprehensive fuzzing of migration parsing
-- [ ] Performance benchmarks for large-scale deployments
+- Performance benchmarks for large-scale deployments
