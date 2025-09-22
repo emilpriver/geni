@@ -445,3 +445,235 @@ impl DatabaseDriver for PostgresDriver {
         Box::pin(fut)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::database_test_utils::*;
+
+    #[test]
+    fn test_validate_postgres_url_valid() {
+        let valid_urls = vec![
+            "postgres://user:pass@localhost:5432/db",
+            "postgresql://user:pass@localhost:5432/db",
+            "psql://user:pass@localhost:5432/db",
+        ];
+
+        for url in valid_urls {
+            let result = validate_postgres_url(url);
+            assert!(result.is_ok(), "URL should be valid: {}", url);
+        }
+    }
+
+    #[test]
+    fn test_validate_postgres_url_invalid() {
+        let invalid_urls = vec![
+            "mysql://user:pass@localhost:3306/db",
+            "sqlite://test.db",
+            "http://localhost:8080",
+            "invalid-url",
+        ];
+
+        for url in invalid_urls {
+            let result = validate_postgres_url(url);
+            assert!(result.is_err(), "URL should be invalid: {}", url);
+        }
+    }
+
+    #[test]
+    fn test_generate_postgres_create_db_query() {
+        let db_name = "test_database";
+        let expected = "CREATE DATABASE test_database";
+        let result = generate_postgres_create_db_query(db_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_postgres_drop_db_query() {
+        let db_name = "test_database";
+        let expected = "DROP DATABASE test_database";
+        let result = generate_postgres_drop_db_query(db_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_postgres_migrations_table_query() {
+        let table_name = "schema_migrations";
+        let expected = "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY)";
+        let result = generate_postgres_migrations_table_query(table_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_postgres_migrations_table_query_custom() {
+        let table_name = "custom_migrations";
+        let expected = "CREATE TABLE IF NOT EXISTS custom_migrations (id VARCHAR(255) PRIMARY KEY)";
+        let result = generate_postgres_migrations_table_query(table_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_postgres_insert_migration_query() {
+        let table_name = "schema_migrations";
+        let expected = "INSERT INTO schema_migrations (id) VALUES ($1)";
+        let result = generate_postgres_insert_migration_query(table_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_postgres_delete_migration_query() {
+        let table_name = "schema_migrations";
+        let expected = "DELETE FROM schema_migrations WHERE id = $1";
+        let result = generate_postgres_delete_migration_query(table_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_postgres_select_migrations_query() {
+        let table_name = "schema_migrations";
+        let expected = "SELECT id FROM schema_migrations ORDER BY id DESC";
+        let result = generate_postgres_select_migrations_query(table_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_validate_wait_timeout_with_value() {
+        let timeout = Some(30);
+        let result = validate_wait_timeout(timeout);
+        assert_eq!(result, 30);
+    }
+
+    #[test]
+    fn test_validate_wait_timeout_none() {
+        let timeout = None;
+        let result = validate_wait_timeout(timeout);
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn test_postgres_driver_parameters() {
+        // Test that PostgresDriver::new has the expected parameter types
+        let _db_url = "postgres://user:pass@localhost:5432/test";
+        let _database_name = "test";
+        let _wait_timeout: Option<usize> = Some(30);
+        let _migrations_table = "schema_migrations".to_string();
+        let _migrations_folder = "./migrations".to_string();
+        let _schema_file = "schema.sql".to_string();
+
+        // Test that parameters are in the expected order (compile-time check)
+        let _test_signature = || async {
+            // Note: This won't actually connect without a real database
+            // but validates the function signature
+            let _future = PostgresDriver::new(
+                _db_url,
+                _database_name,
+                _wait_timeout,
+                _migrations_table.clone(),
+                _migrations_folder.clone(),
+                _schema_file.clone(),
+            );
+            Ok::<(), anyhow::Error>(())
+        };
+
+        assert!(true);
+    }
+
+    #[test]
+    fn test_postgres_driver_struct_fields() {
+        // Test that PostgresDriver has expected fields (compile-time validation)
+        fn _test_fields() {
+            let _check_url: fn(&PostgresDriver) -> &String = |driver| &driver.url;
+            let _check_db_name: fn(&PostgresDriver) -> &String = |driver| &driver.db_name;
+            let _check_migrations_table: fn(&PostgresDriver) -> &String = |driver| &driver.migrations_table;
+            let _check_migrations_folder: fn(&PostgresDriver) -> &String = |driver| &driver.migrations_folder;
+            let _check_schema_file: fn(&PostgresDriver) -> &String = |driver| &driver.schema_file;
+        }
+
+        assert!(true);
+    }
+
+    #[test]
+    fn test_postgres_query_generation_edge_cases() {
+        // Test with special characters that might need escaping
+        let special_names = vec![
+            "test_db",
+            "test-db",
+            "test123",
+            "migrations_v2",
+        ];
+
+        for name in special_names {
+            let create_query = generate_postgres_create_db_query(name);
+            let drop_query = generate_postgres_drop_db_query(name);
+            let table_query = generate_postgres_migrations_table_query(name);
+
+            // Verify queries contain the name
+            assert!(create_query.contains(name));
+            assert!(drop_query.contains(name));
+            assert!(table_query.contains(name));
+
+            // Verify query structure
+            assert!(create_query.starts_with("CREATE DATABASE"));
+            assert!(drop_query.starts_with("DROP DATABASE"));
+            assert!(table_query.starts_with("CREATE TABLE IF NOT EXISTS"));
+        }
+    }
+
+    #[test]
+    fn test_postgres_url_schemes() {
+        let test_cases = vec![
+            ("postgres://localhost/db", true),
+            ("postgresql://localhost/db", true),
+            ("psql://localhost/db", true),
+            ("POSTGRES://localhost/db", false), // case sensitive
+            ("postgres://", true), // minimal valid
+            ("postgres:localhost/db", false), // missing //
+            ("http://localhost/db", false),
+            ("mysql://localhost/db", false),
+        ];
+
+        for (url, should_be_valid) in test_cases {
+            let result = validate_postgres_url(url);
+            if should_be_valid {
+                assert!(result.is_ok(), "URL should be valid: {}", url);
+            } else {
+                assert!(result.is_err(), "URL should be invalid: {}", url);
+            }
+        }
+    }
+
+    #[test]
+    fn test_postgres_parameterized_queries() {
+        // Test that parameterized queries use PostgreSQL syntax ($1, $2, etc.)
+        let table_name = "test_migrations";
+
+        let insert_query = generate_postgres_insert_migration_query(table_name);
+        let delete_query = generate_postgres_delete_migration_query(table_name);
+
+        // Verify PostgreSQL parameter syntax
+        assert!(insert_query.contains("$1"));
+        assert!(delete_query.contains("$1"));
+
+        // Verify proper SQL structure
+        assert!(insert_query.contains("INSERT INTO"));
+        assert!(insert_query.contains("VALUES"));
+        assert!(delete_query.contains("DELETE FROM"));
+        assert!(delete_query.contains("WHERE"));
+    }
+
+    #[test]
+    fn test_wait_timeout_boundary_conditions() {
+        let test_cases = vec![
+            (Some(0), 0),
+            (Some(1), 1),
+            (Some(30), 30),
+            (Some(3600), 3600),
+            (None, 0),
+        ];
+
+        for (input, expected) in test_cases {
+            let result = validate_wait_timeout(input);
+            assert_eq!(result, expected, "Failed for input: {:?}", input);
+        }
+    }
+}

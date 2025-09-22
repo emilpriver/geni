@@ -8,3 +8,23 @@ example.db
 /tmp/
 scripts/migrations
 result
+
+# IDEs
+## JetBrains IDEs (IntelliJ IDEA, CLion, RustRover, etc.)
+.idea/
+*.iws
+*.iml
+*.ipr
+
+## Visual Studio Code
+.vscode/
+*.code-workspace
+
+## Vim
+*.swp
+*.swo
+*~
+
+## Emacs
+\#*\#
+.\#*

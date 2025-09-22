@@ -31,3 +31,73 @@ impl Database {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_database_new_valid_schemes() {
+        // Test LibSQL schemes
+        assert!(matches!(Database::new("https").unwrap(), Database::LibSQL));
+        assert!(matches!(Database::new("http").unwrap(), Database::LibSQL));
+        assert!(matches!(Database::new("libsql").unwrap(), Database::LibSQL));
+
+        // Test Postgres schemes
+        assert!(matches!(Database::new("psql").unwrap(), Database::Postgres));
+        assert!(matches!(Database::new("postgres").unwrap(), Database::Postgres));
+        assert!(matches!(Database::new("postgresql").unwrap(), Database::Postgres));
+
+        // Test MariaDB scheme
+        assert!(matches!(Database::new("mariadb").unwrap(), Database::MariaDB));
+
+        // Test MySQL scheme
+        assert!(matches!(Database::new("mysql").unwrap(), Database::MySQL));
+
+        // Test SQLite schemes
+        assert!(matches!(Database::new("sqlite").unwrap(), Database::SQLite));
+        assert!(matches!(Database::new("sqlite3").unwrap(), Database::SQLite));
+    }
+
+    #[test]
+    fn test_database_new_invalid_scheme() {
+        assert!(Database::new("invalid").is_err());
+        assert!(Database::new("").is_err());
+        assert!(Database::new("mongodb").is_err());
+        assert!(Database::new("redis").is_err());
+
+        // Test case sensitivity
+        assert!(Database::new("POSTGRES").is_err());
+        assert!(Database::new("MySQL").is_err());
+    }
+
+    #[test]
+    fn test_database_as_str() {
+        assert_eq!(Database::LibSQL.as_str().unwrap(), "libsql");
+        assert_eq!(Database::Postgres.as_str().unwrap(), "postgres");
+        assert_eq!(Database::MariaDB.as_str().unwrap(), "mariadb");
+        assert_eq!(Database::MySQL.as_str().unwrap(), "mysql");
+        assert_eq!(Database::SQLite.as_str().unwrap(), "sqlite");
+    }
+
+    #[test]
+    fn test_database_roundtrip() {
+        let schemes = vec![
+            ("https", "libsql"),
+            ("http", "libsql"),
+            ("libsql", "libsql"),
+            ("psql", "postgres"),
+            ("postgres", "postgres"),
+            ("postgresql", "postgres"),
+            ("mariadb", "mariadb"),
+            ("mysql", "mysql"),
+            ("sqlite", "sqlite"),
+            ("sqlite3", "sqlite"),
+        ];
+
+        for (scheme, expected) in schemes {
+            let db = Database::new(scheme).unwrap();
+            assert_eq!(db.as_str().unwrap(), expected);
+        }
+    }
+}

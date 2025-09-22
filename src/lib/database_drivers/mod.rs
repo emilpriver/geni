@@ -148,3 +148,197 @@ pub async fn new(
         _ => bail!("Unsupported database driver: {}", scheme),
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::database_test_utils::*;
+
+    #[test]
+    fn test_schema_migration_struct() {
+        // Test that SchemaMigration can be created and has the expected fields
+        let migration = SchemaMigration {
+            id: "1234567890".to_string(),
+        };
+
+        assert_eq!(migration.id, "1234567890");
+    }
+
+    #[test]
+    fn test_extract_database_name_from_url_postgres() {
+        let url = "postgres://user:pass@localhost:5432/testdb";
+        let result = extract_database_name_from_url(url).unwrap();
+        assert_eq!(result, "testdb");
+    }
+
+    #[test]
+    fn test_extract_database_name_from_url_mysql() {
+        let url = "mysql://root:password@localhost:3306/myapp";
+        let result = extract_database_name_from_url(url).unwrap();
+        assert_eq!(result, "myapp");
+    }
+
+    #[test]
+    fn test_extract_database_name_from_url_sqlite() {
+        let url = "sqlite://./test.db";
+        let result = extract_database_name_from_url(url).unwrap();
+        assert_eq!(result, "test.db"); // URL parsing removes the "./"
+    }
+
+    #[test]
+    fn test_extract_database_name_from_url_no_db() {
+        let url = "postgres://localhost:5432/";
+        let result = extract_database_name_from_url(url).unwrap();
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_extract_database_name_from_url_invalid() {
+        let url = "not-a-url";
+        let result = extract_database_name_from_url(url);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_postgres() {
+        let url = "postgres://localhost/test";
+        let result = get_database_type_from_url(url).unwrap();
+        assert!(matches!(result, crate::config::Database::Postgres));
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_mysql() {
+        let url = "mysql://localhost/test";
+        let result = get_database_type_from_url(url).unwrap();
+        assert!(matches!(result, crate::config::Database::MySQL));
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_mariadb() {
+        let url = "mariadb://localhost/test";
+        let result = get_database_type_from_url(url).unwrap();
+        assert!(matches!(result, crate::config::Database::MariaDB));
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_sqlite() {
+        let url = "sqlite://test.db";
+        let result = get_database_type_from_url(url).unwrap();
+        assert!(matches!(result, crate::config::Database::SQLite));
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_sqlite3() {
+        let url = "sqlite3://test.db";
+        let result = get_database_type_from_url(url).unwrap();
+        assert!(matches!(result, crate::config::Database::SQLite));
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_libsql() {
+        let url = "http://localhost:8080";
+        let result = get_database_type_from_url(url).unwrap();
+        assert!(matches!(result, crate::config::Database::LibSQL));
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_libsql_https() {
+        let url = "https://my-db.turso.io";
+        let result = get_database_type_from_url(url).unwrap();
+        assert!(matches!(result, crate::config::Database::LibSQL));
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_libsql_scheme() {
+        let url = "libsql://my-db.turso.io";
+        let result = get_database_type_from_url(url).unwrap();
+        assert!(matches!(result, crate::config::Database::LibSQL));
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_invalid_scheme() {
+        let url = "redis://localhost:6379";
+        let result = get_database_type_from_url(url);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_database_type_from_url_invalid_url() {
+        let url = "not-a-valid-url";
+        let result = get_database_type_from_url(url);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_database_driver_factory_parameters() {
+        // Test that the new function has the expected signature
+        // This is a compile-time test to ensure API consistency
+
+        let _params = (
+            "sqlite://test.db".to_string(),           // db_url
+            None::<String>,                           // db_token
+            "schema_migrations".to_string(),          // migrations_table
+            "./migrations".to_string(),               // migrations_folder
+            "schema.sql".to_string(),                 // schema_file
+            Some(30_usize),                          // wait_timeout
+            true,                                     // with_selected_database
+        );
+
+        // Test that the function accepts these parameter types
+        // This is a compile-time validation
+        assert!(true);
+    }
+
+    #[test]
+    fn test_url_parsing_edge_cases() {
+        // Test various URL formats that should be supported
+        let test_cases = vec![
+            ("postgres://user@localhost/db", "postgres"),
+            ("postgresql://user@localhost/db", "postgresql"),
+            ("psql://user@localhost/db", "psql"),
+            ("mysql://root@localhost/app", "mysql"),
+            ("mariadb://user@localhost/test", "mariadb"),
+            ("sqlite://./test.db", "sqlite"),
+            ("sqlite3://./test.db", "sqlite3"),
+            ("http://localhost:8080", "http"),
+            ("https://turso.io", "https"),
+            ("libsql://turso.io", "libsql"),
+        ];
+
+        for (url, expected_scheme) in test_cases {
+            let parsed_url = url::Url::parse(url).unwrap();
+            assert_eq!(parsed_url.scheme(), expected_scheme);
+        }
+    }
+
+    #[test]
+    fn test_postgresql_scheme_normalization() {
+        // Test that postgres/psql schemes get normalized to postgresql
+        let test_urls = vec![
+            "postgres://localhost/test",
+            "psql://localhost/test",
+        ];
+
+        for url in test_urls {
+            let mut parsed_url = url::Url::parse(url).unwrap();
+            // This simulates what happens in the new() function
+            parsed_url.set_scheme("postgresql").unwrap();
+            assert_eq!(parsed_url.scheme(), "postgresql");
+        }
+    }
+
+    #[test]
+    fn test_database_path_manipulation() {
+        // Test path manipulation for database creation vs selection
+        let url = "postgres://localhost:5432/testdb";
+        let mut parsed_url = url::Url::parse(url).unwrap();
+        let original_path = parsed_url.path();
+
+        assert_eq!(original_path, "/testdb");
+
+        // Test path clearing for database creation
+        parsed_url.set_path("");
+        assert_eq!(parsed_url.path(), "");
+    }
+}

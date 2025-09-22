@@ -206,3 +206,164 @@ impl DatabaseDriver for SqliteDriver {
         Box::pin(fut)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::database_test_utils::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_parse_sqlite_path_with_scheme() {
+        let url = "sqlite://test.db";
+        let result = parse_sqlite_path(url);
+        assert_eq!(result, "test.db");
+    }
+
+    #[test]
+    fn test_parse_sqlite_path_with_scheme_complex() {
+        let url = "sqlite:///absolute/path/to/database.db";
+        let result = parse_sqlite_path(url);
+        assert_eq!(result, "/absolute/path/to/database.db");
+    }
+
+    #[test]
+    fn test_parse_sqlite_path_relative() {
+        let url = "sqlite://./relative/path.db";
+        let result = parse_sqlite_path(url);
+        assert_eq!(result, "./relative/path.db");
+    }
+
+    #[test]
+    fn test_parse_sqlite_path_without_scheme() {
+        let url = "test.db";
+        let result = parse_sqlite_path(url);
+        assert_eq!(result, "test.db");
+    }
+
+    #[test]
+    fn test_parse_sqlite_path_without_scheme_complex() {
+        let url = "/absolute/path/to/database.db";
+        let result = parse_sqlite_path(url);
+        assert_eq!(result, "/absolute/path/to/database.db");
+    }
+
+    #[test]
+    fn test_parse_sqlite_path_memory() {
+        let url = "sqlite://:memory:";
+        let result = parse_sqlite_path(url);
+        assert_eq!(result, ":memory:");
+    }
+
+    #[test]
+    fn test_sqlite_driver_parameters() {
+        // Test that SqliteDriver::new has the expected parameter types
+        let _db_url = "sqlite://test.db";
+        let _migrations_table = "schema_migrations".to_string();
+        let _migrations_folder = "./migrations".to_string();
+        let _schema_file = "schema.sql".to_string();
+
+        // Test that parameters are in the expected order (compile-time check)
+        let _test_signature = || async {
+            let _driver = SqliteDriver::new(
+                _db_url,
+                _migrations_table.clone(),
+                _migrations_folder.clone(),
+                _schema_file.clone(),
+            ).await?;
+            Ok::<(), anyhow::Error>(())
+        };
+
+        assert!(true);
+    }
+
+    #[test]
+    fn test_sqlite_driver_struct_fields() {
+        // Test that SqliteDriver has expected fields (compile-time validation)
+        // This ensures the struct maintains its expected interface
+
+        fn _test_fields() {
+            let _check_path: fn(&SqliteDriver) -> &String = |driver| &driver.path;
+            let _check_migrations_table: fn(&SqliteDriver) -> &String = |driver| &driver.migrations_table;
+            let _check_migrations_folder: fn(&SqliteDriver) -> &String = |driver| &driver.migrations_folder;
+            let _check_schema_file: fn(&SqliteDriver) -> &String = |driver| &driver.schema_file;
+        }
+
+        assert!(true);
+    }
+
+    #[test]
+    fn test_path_handling_edge_cases() {
+        // Test various SQLite URL formats
+        let test_cases = vec![
+            ("sqlite://test.db", "test.db"),
+            ("sqlite3://test.db", "test.db"),
+            ("sqlite:///tmp/test.db", "/tmp/test.db"),
+            ("sqlite://./relative.db", "./relative.db"),
+            ("sqlite://:memory:", ":memory:"),
+            ("test.db", "test.db"),
+            ("./test.db", "./test.db"),
+            ("/absolute/test.db", "/absolute/test.db"),
+        ];
+
+        for (input, expected) in test_cases {
+            let result = parse_sqlite_path(input);
+            assert_eq!(result, expected, "Failed for input: {}", input);
+        }
+    }
+
+    #[test]
+    fn test_sqlite_url_variations() {
+        // Test that various SQLite URL schemes are parsed correctly
+        let urls = vec![
+            "sqlite://database.db",
+            "sqlite3://database.db",
+            "file://database.db",
+            "database.db",
+        ];
+
+        for url in urls {
+            let path = parse_sqlite_path(url);
+            assert!(!path.is_empty(), "Path should not be empty for URL: {}", url);
+
+            if url.contains("://") {
+                assert!(!path.contains("://"), "Path should not contain scheme for URL: {}", url);
+            }
+        }
+    }
+
+    #[test]
+    fn test_path_validation() {
+        // Test that paths are correctly identified as relative or absolute
+        let test_cases = vec![
+            ("./test.db", false), // relative
+            ("../test.db", false), // relative
+            ("test.db", false), // relative
+            ("/tmp/test.db", true), // absolute
+            ("/var/lib/sqlite/test.db", true), // absolute
+        ];
+
+        for (path_str, should_be_absolute) in test_cases {
+            let path = Path::new(path_str);
+            assert_eq!(
+                path.is_absolute(),
+                should_be_absolute,
+                "Path absoluteness mismatch for: {}",
+                path_str
+            );
+        }
+    }
+
+    #[test]
+    fn test_memory_database_detection() {
+        let memory_urls = vec![
+            "sqlite://:memory:",
+            ":memory:",
+        ];
+
+        for url in memory_urls {
+            let path = parse_sqlite_path(url);
+            assert_eq!(path, ":memory:", "Memory database not detected for: {}", url);
+        }
+    }
+}
