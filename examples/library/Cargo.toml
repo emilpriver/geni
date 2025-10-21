@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 "geni" = { path = "../../" }
-tokio = "1.36.0"
+tokio = "1.43.1"
