@@ -195,3 +195,12 @@ pub fn normalize_mariadb_localhost_url(url: &str) -> Result<String> {
     }
     Ok(parsed_url.to_string())
 }
+
+/// Helper function to validate Turso URLs for testing
+pub fn validate_turso_url(db_url: &str) -> Result<bool> {
+    if !db_url.starts_with("turso://") {
+        bail!("Invalid Turso URL scheme. Must start with turso://");
+    }
+
+    Ok(true)
+}

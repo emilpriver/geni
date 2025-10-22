@@ -2,6 +2,7 @@ use anyhow::{bail, Result};
 
 pub enum Database {
     LibSQL,
+    Turso,
     Postgres,
     MariaDB,
     MySQL,
@@ -13,6 +14,7 @@ impl Database {
     pub fn new(s: &str) -> Result<Database> {
         match s {
             "https" | "http" | "libsql" => Ok(Database::LibSQL),
+            "turso" => Ok(Database::Turso),
             "psql" | "postgres" | "postgresql" => Ok(Database::Postgres),
             "mariadb" => Ok(Database::MariaDB),
             "mysql" => Ok(Database::MySQL),
@@ -24,6 +26,7 @@ impl Database {
     pub fn as_str(&self) -> Result<&str> {
         match self {
             Database::LibSQL => Ok("libsql"),
+            Database::Turso => Ok("turso"),
             Database::Postgres => Ok("postgres"),
             Database::MariaDB => Ok("mariadb"),
             Database::MySQL => Ok("mysql"),

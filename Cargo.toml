@@ -41,6 +41,7 @@ url = { version = "2.5.0", features = ["serde"] }
 which = "8.0.0"
 regex = "1.11.1"
 libsql = "0.6.0"
+turso = "0.2.2"
 
 [dev-dependencies]
 mockall = "0.13.1"
