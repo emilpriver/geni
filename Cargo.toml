@@ -1,6 +1,6 @@
 [package]
 name = "geni"
-version = "1.1.6"
+version = "1.1.7"
 edition = "2021"
 resolver = "2"
 description = "A standalone database CLI migration tool"
@@ -25,27 +25,27 @@ name = "geni"
 path = "src/bin/geni/bin.rs"
 
 [dependencies]
-async-trait = "0.1.87"
-anyhow = "1.0.97"
-chrono = { version = "0.4.40", features = ["serde"] }
-clap = { version = "4.5.38", features = ["env", "string", "derive", "cargo"] }
+async-trait = "0.1.89"
+anyhow = "1.0.100"
+chrono = { version = "0.4.42", features = ["serde"] }
+clap = { version = "4.5.51", features = ["env", "string", "derive", "cargo"] }
 futures = "0.3.31"
-serde = { version = "1.0.217", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 log = { version = "0.4.28", features = ["max_level_debug", "serde"] }
-serial_test = "3.1.1"
+serial_test = "3.2.0"
 simplelog = "0.12.2"
-tokio = { version = "1.43.0", features = ["full"] }
-sqlx = { version = "0.8.2",  features = ["runtime-tokio", "chrono", "postgres", "mysql", "time"] }
-url = { version = "2.5.0", features = ["serde"] }
+tokio = { version = "1.48.0", features = ["full"] }
+sqlx = { version = "0.8.6",  features = ["runtime-tokio", "chrono", "postgres", "mysql", "time"] }
+url = { version = "2.5.7", features = ["serde"] }
 which = "8.0.0"
-regex = "1.11.1"
+regex = "1.12.2"
 libsql = "0.6.0"
 turso = "0.2.2"
 
 [dev-dependencies]
 mockall = "0.13.1"
-tempfile = "3.22.0"
+tempfile = "3.23.0"
 tempdir = "0.3.7"
 
 [profile.release]
