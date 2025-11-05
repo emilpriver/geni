@@ -10,6 +10,7 @@ pub mod maria;
 pub mod mysql;
 pub mod postgres;
 pub mod sqlite;
+pub mod turso;
 mod utils;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -89,6 +90,17 @@ pub async fn new(
     match scheme {
         "http" | "https" | "libsql" => {
             let driver = libsql::LibSQLDriver::new(
+                &parsed_db_url.to_string(),
+                db_token,
+                migrations_table,
+                migrations_folder,
+                schema_file,
+            )
+            .await?;
+            Ok(Box::new(driver))
+        }
+        "turso" => {
+            let driver = turso::TursoDriver::new(
                 &parsed_db_url.to_string(),
                 db_token,
                 migrations_table,
