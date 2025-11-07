@@ -36,6 +36,7 @@ jobs:
             image: ubuntu-latest
             arch: 386
             setup: |
+              sudo apt-get update
               sudo apt-get install -qq gcc-i686-linux-gnu
               sudo apt-get install -qq libssl-dev
               sudo apt-get install -qq gcc-multilib
@@ -48,6 +49,7 @@ jobs:
             image: ubuntu-latest
             arch: arm
             setup: |
+              sudo apt-get update
               sudo apt-get install -qq gcc-arm-linux-gnueabi 
               sudo apt-get install -qq libssl-dev
             env: 
@@ -56,6 +58,7 @@ jobs:
             image: ubuntu-latest
             arch: arm64
             setup: |
+              sudo apt-get update
               sudo apt-get install -qq gcc-aarch64-linux-gnu
               sudo apt-get install -qq libssl-dev
             env:
