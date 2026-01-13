@@ -51,20 +51,13 @@ impl DatabaseDriver for TursoDriver {
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
             if run_in_transaction {
-                // Turso SDK doesn't have execute_transactional_batch, so we wrap in BEGIN/COMMIT
-                self.conn.execute("BEGIN TRANSACTION", ()).await?;
-                match self.conn.execute(query, ()).await {
-                    Ok(_) => {
-                        self.conn.execute("COMMIT", ()).await?;
-                        Ok(())
-                    }
-                    Err(e) => {
-                        let _ = self.conn.execute("ROLLBACK", ()).await;
-                        Err(e.into())
-                    }
-                }
+                // Wrap the batch in a transaction
+                let batch = format!("BEGIN TRANSACTION;\n{}\nCOMMIT;", query);
+                self.conn.execute_batch(&batch).await?;
+                Ok(())
             } else {
-                self.conn.execute(query, ()).await?;
+                // Use execute_batch for multi-statement migrations
+                self.conn.execute_batch(query).await?;
                 Ok(())
             }
         };
