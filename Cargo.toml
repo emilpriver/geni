@@ -40,7 +40,7 @@ sqlx = { version = "0.8.6",  features = ["runtime-tokio", "chrono", "postgres", 
 url = { version = "2.5.8", features = ["serde"] }
 which = "8.0.0"
 regex = "1.12.3"
-libsql = "0.9.29"
+libsql = "0.6.0"
 turso = "0.2.2"
 
 [dev-dependencies]
