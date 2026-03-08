@@ -40,7 +40,12 @@ mod tests {
         let schema_file = "test_schema.sql".to_string();
         let content = "CREATE TABLE users (id INTEGER PRIMARY KEY);".to_string();
 
-        let result = write_to_schema_file(content.clone(), migrations_folder.clone(), schema_file.clone()).await;
+        let result = write_to_schema_file(
+            content.clone(),
+            migrations_folder.clone(),
+            schema_file.clone(),
+        )
+        .await;
         assert!(result.is_ok());
 
         // Verify file was created and has correct content
@@ -57,12 +62,22 @@ mod tests {
 
         // Write initial content
         let initial_content = "CREATE TABLE test1 (id INTEGER);".to_string();
-        let result1 = write_to_schema_file(initial_content.clone(), migrations_folder.clone(), schema_file.clone()).await;
+        let result1 = write_to_schema_file(
+            initial_content.clone(),
+            migrations_folder.clone(),
+            schema_file.clone(),
+        )
+        .await;
         assert!(result1.is_ok());
 
         // Write new content (should overwrite)
         let new_content = "CREATE TABLE test2 (id INTEGER, name TEXT);".to_string();
-        let result2 = write_to_schema_file(new_content.clone(), migrations_folder.clone(), schema_file.clone()).await;
+        let result2 = write_to_schema_file(
+            new_content.clone(),
+            migrations_folder.clone(),
+            schema_file.clone(),
+        )
+        .await;
         assert!(result2.is_ok());
 
         // Verify file was overwritten
@@ -75,11 +90,22 @@ mod tests {
     #[tokio::test]
     async fn test_write_to_schema_file_nested_directory() {
         let tmp_dir = tempdir().unwrap();
-        let migrations_folder = tmp_dir.path().join("nested").join("path").to_str().unwrap().to_string();
+        let migrations_folder = tmp_dir
+            .path()
+            .join("nested")
+            .join("path")
+            .to_str()
+            .unwrap()
+            .to_string();
         let schema_file = "nested_schema.sql".to_string();
         let content = "CREATE INDEX idx_users_email ON users(email);".to_string();
 
-        let result = write_to_schema_file(content.clone(), migrations_folder.clone(), schema_file.clone()).await;
+        let result = write_to_schema_file(
+            content.clone(),
+            migrations_folder.clone(),
+            schema_file.clone(),
+        )
+        .await;
         assert!(result.is_ok());
 
         // Verify nested directories were created
@@ -97,7 +123,12 @@ mod tests {
         let schema_file = "empty_schema.sql".to_string();
         let content = "".to_string();
 
-        let result = write_to_schema_file(content.clone(), migrations_folder.clone(), schema_file.clone()).await;
+        let result = write_to_schema_file(
+            content.clone(),
+            migrations_folder.clone(),
+            schema_file.clone(),
+        )
+        .await;
         assert!(result.is_ok());
 
         let schema_path = format!("{}/{}", migrations_folder, schema_file);
@@ -114,10 +145,18 @@ mod tests {
         // Create large content
         let mut content = String::new();
         for i in 0..1000 {
-            content.push_str(&format!("CREATE TABLE table_{} (id INTEGER PRIMARY KEY);\n", i));
+            content.push_str(&format!(
+                "CREATE TABLE table_{} (id INTEGER PRIMARY KEY);\n",
+                i
+            ));
         }
 
-        let result = write_to_schema_file(content.clone(), migrations_folder.clone(), schema_file.clone()).await;
+        let result = write_to_schema_file(
+            content.clone(),
+            migrations_folder.clone(),
+            schema_file.clone(),
+        )
+        .await;
         assert!(result.is_ok());
 
         let schema_path = format!("{}/{}", migrations_folder, schema_file);
@@ -131,9 +170,16 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let migrations_folder = tmp_dir.path().to_str().unwrap().to_string();
         let schema_file = "special_schema.sql".to_string();
-        let content = "CREATE TABLE test (id INTEGER, data TEXT DEFAULT 'special chars: éñ中文🚀');".to_string();
+        let content =
+            "CREATE TABLE test (id INTEGER, data TEXT DEFAULT 'special chars: éñ中文🚀');"
+                .to_string();
 
-        let result = write_to_schema_file(content.clone(), migrations_folder.clone(), schema_file.clone()).await;
+        let result = write_to_schema_file(
+            content.clone(),
+            migrations_folder.clone(),
+            schema_file.clone(),
+        )
+        .await;
         assert!(result.is_ok());
 
         let schema_path = format!("{}/{}", migrations_folder, schema_file);
@@ -148,7 +194,12 @@ mod tests {
         let schema_file = "path_test.sql".to_string();
         let content = "SELECT 1;".to_string();
 
-        let result = write_to_schema_file(content.clone(), migrations_folder.clone(), schema_file.clone()).await;
+        let result = write_to_schema_file(
+            content.clone(),
+            migrations_folder.clone(),
+            schema_file.clone(),
+        )
+        .await;
         assert!(result.is_ok());
 
         // Test that the path is formatted correctly
@@ -157,7 +208,12 @@ mod tests {
 
         // Test with different path separators
         let schema_file_with_subdir = "subdir/schema.sql".to_string();
-        let result2 = write_to_schema_file(content.clone(), migrations_folder.clone(), schema_file_with_subdir.clone()).await;
+        let result2 = write_to_schema_file(
+            content.clone(),
+            migrations_folder.clone(),
+            schema_file_with_subdir.clone(),
+        )
+        .await;
         assert!(result2.is_ok());
 
         let expected_path2 = format!("{}/{}", migrations_folder, schema_file_with_subdir);

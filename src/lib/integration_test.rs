@@ -2,10 +2,9 @@
 mod tests {
     use crate::config::Database;
     use crate::database_drivers;
-    
+
     use log::info;
     use serial_test::serial;
-    
 
     use crate::migrate::{down, up};
     use anyhow::Ok;

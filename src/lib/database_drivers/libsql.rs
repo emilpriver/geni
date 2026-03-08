@@ -261,7 +261,10 @@ mod tests {
         let url = "libsql://./local.db";
         let result = validate_libsql_url(url);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("libsql:// should only be used with remote database"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("libsql:// should only be used with remote database"));
     }
 
     #[test]
@@ -277,7 +280,10 @@ mod tests {
         for url in invalid_urls {
             let result = validate_libsql_url(url);
             assert!(result.is_err(), "URL should be invalid: {}", url);
-            assert!(result.unwrap_err().to_string().contains("Invalid LibSQL URL scheme"));
+            assert!(result
+                .unwrap_err()
+                .to_string()
+                .contains("Invalid LibSQL URL scheme"));
         }
     }
 
@@ -332,8 +338,10 @@ mod tests {
     fn test_libsql_driver_struct_fields() {
         // Test that LibSQLDriver has expected fields (compile-time validation)
         fn _test_fields() {
-            let _check_migrations_table: fn(&LibSQLDriver) -> &String = |driver| &driver.migrations_table;
-            let _check_migrations_folder: fn(&LibSQLDriver) -> &String = |driver| &driver.migrations_folder;
+            let _check_migrations_table: fn(&LibSQLDriver) -> &String =
+                |driver| &driver.migrations_table;
+            let _check_migrations_folder: fn(&LibSQLDriver) -> &String =
+                |driver| &driver.migrations_folder;
             let _check_schema_file: fn(&LibSQLDriver) -> &String = |driver| &driver.schema_file;
         }
 
@@ -398,10 +406,10 @@ mod tests {
     fn test_edge_case_urls() {
         // Test edge cases that might cause issues
         let edge_cases = vec![
-            ("http://", false), // Empty host
-            ("https://", false), // Empty host
-            ("libsql://", false), // Empty host
-            ("http://localhost", true), // No port
+            ("http://", false),            // Empty host
+            ("https://", false),           // Empty host
+            ("libsql://", false),          // Empty host
+            ("http://localhost", true),    // No port
             ("https://example.com", true), // Standard HTTPS
         ];
 
@@ -412,7 +420,11 @@ mod tests {
             } else {
                 // For these specific edge cases, we still accept them as valid schemes
                 // The actual connection validation would happen at runtime
-                assert!(result.is_ok(), "Edge case URL with valid scheme should pass validation: {}", url);
+                assert!(
+                    result.is_ok(),
+                    "Edge case URL with valid scheme should pass validation: {}",
+                    url
+                );
             }
         }
     }

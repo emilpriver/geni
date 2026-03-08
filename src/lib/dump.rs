@@ -165,10 +165,16 @@ mod tests {
 
         // Verify schema file has content
         let schema_content = fs::read_to_string(&schema_path)?;
-        assert!(!schema_content.trim().is_empty(), "Schema file should not be empty");
+        assert!(
+            !schema_content.trim().is_empty(),
+            "Schema file should not be empty"
+        );
 
         // Check for our test tables in the schema
-        assert!(schema_content.contains("test_users"), "Schema should contain the 'test_users' table definition");
+        assert!(
+            schema_content.contains("test_users"),
+            "Schema should contain the 'test_users' table definition"
+        );
 
         Ok(())
     }
@@ -186,7 +192,10 @@ mod tests {
         // Setup test schema
         if let Err(e) = setup_test_database_with_schema(database_url).await {
             // Skip test if database is not available
-            log::info!("Skipping Postgres dump test - database not available: {}", e);
+            log::info!(
+                "Skipping Postgres dump test - database not available: {}",
+                e
+            );
             return Ok(());
         }
 
@@ -209,7 +218,10 @@ mod tests {
 
         // Verify schema file has content
         let schema_content = fs::read_to_string(&schema_path)?;
-        assert!(!schema_content.trim().is_empty(), "Schema file should not be empty");
+        assert!(
+            !schema_content.trim().is_empty(),
+            "Schema file should not be empty"
+        );
 
         Ok(())
     }
@@ -250,7 +262,10 @@ mod tests {
 
         // Verify schema file has content
         let schema_content = fs::read_to_string(&schema_path)?;
-        assert!(!schema_content.trim().is_empty(), "Schema file should not be empty");
+        assert!(
+            !schema_content.trim().is_empty(),
+            "Schema file should not be empty"
+        );
 
         Ok(())
     }
@@ -291,7 +306,10 @@ mod tests {
 
         // Verify schema file has content
         let schema_content = fs::read_to_string(&schema_path)?;
-        assert!(!schema_content.trim().is_empty(), "Schema file should not be empty");
+        assert!(
+            !schema_content.trim().is_empty(),
+            "Schema file should not be empty"
+        );
 
         Ok(())
     }
@@ -321,7 +339,8 @@ mod tests {
             migrations_folder.clone(),
             schema_file.to_string(),
             Some(30),
-            ).await;
+        )
+        .await;
 
         assert!(result.is_ok(), "Dump should succeed for LibSQL");
 
@@ -331,7 +350,10 @@ mod tests {
 
         // Verify schema file has content
         let schema_content = fs::read_to_string(&schema_path)?;
-        assert!(!schema_content.trim().is_empty(), "Schema file should not be empty");
+        assert!(
+            !schema_content.trim().is_empty(),
+            "Schema file should not be empty"
+        );
 
         Ok(())
     }
@@ -352,7 +374,10 @@ mod tests {
         )
         .await;
 
-        assert!(result.is_err(), "Dump should fail with invalid database URL");
+        assert!(
+            result.is_err(),
+            "Dump should fail with invalid database URL"
+        );
 
         Ok(())
     }

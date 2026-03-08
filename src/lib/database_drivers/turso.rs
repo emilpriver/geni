@@ -90,11 +90,7 @@ impl DatabaseDriver for TursoDriver {
             let mut stmt = self
                 .conn
                 .prepare(
-                    format!(
-                        "SELECT id FROM {} ORDER BY id DESC;",
-                        self.migrations_table
-                    )
-                    .as_str(),
+                    format!("SELECT id FROM {} ORDER BY id DESC;", self.migrations_table).as_str(),
                 )
                 .await?;
 
@@ -194,10 +190,7 @@ impl DatabaseDriver for TursoDriver {
                 .collect::<Vec<&str>>()
                 .join("\n");
 
-            let mut stmt = self
-                .conn
-                .prepare("SELECT sql FROM sqlite_master")
-                .await?;
+            let mut stmt = self.conn.prepare("SELECT sql FROM sqlite_master").await?;
 
             let mut rows = stmt.query(()).await?;
 
@@ -270,7 +263,10 @@ mod tests {
         for url in invalid_urls {
             let result = validate_turso_url(url);
             assert!(result.is_err(), "URL should be invalid: {}", url);
-            assert!(result.unwrap_err().to_string().contains("Invalid Turso URL scheme"));
+            assert!(result
+                .unwrap_err()
+                .to_string()
+                .contains("Invalid Turso URL scheme"));
         }
     }
 
@@ -299,8 +295,10 @@ mod tests {
     #[test]
     fn test_turso_driver_struct_fields() {
         fn _test_fields() {
-            let _check_migrations_table: fn(&TursoDriver) -> &String = |driver| &driver.migrations_table;
-            let _check_migrations_folder: fn(&TursoDriver) -> &String = |driver| &driver.migrations_folder;
+            let _check_migrations_table: fn(&TursoDriver) -> &String =
+                |driver| &driver.migrations_table;
+            let _check_migrations_folder: fn(&TursoDriver) -> &String =
+                |driver| &driver.migrations_folder;
             let _check_schema_file: fn(&TursoDriver) -> &String = |driver| &driver.schema_file;
         }
 
@@ -345,10 +343,7 @@ mod tests {
 
     #[test]
     fn test_special_paths() {
-        let special_paths = vec![
-            "turso://:memory:",
-            "turso://file::memory:?cache=shared",
-        ];
+        let special_paths = vec!["turso://:memory:", "turso://file::memory:?cache=shared"];
 
         for path in special_paths {
             let result = validate_turso_url(path);

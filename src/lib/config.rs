@@ -48,18 +48,30 @@ mod tests {
 
         // Test Postgres schemes
         assert!(matches!(Database::new("psql").unwrap(), Database::Postgres));
-        assert!(matches!(Database::new("postgres").unwrap(), Database::Postgres));
-        assert!(matches!(Database::new("postgresql").unwrap(), Database::Postgres));
+        assert!(matches!(
+            Database::new("postgres").unwrap(),
+            Database::Postgres
+        ));
+        assert!(matches!(
+            Database::new("postgresql").unwrap(),
+            Database::Postgres
+        ));
 
         // Test MariaDB scheme
-        assert!(matches!(Database::new("mariadb").unwrap(), Database::MariaDB));
+        assert!(matches!(
+            Database::new("mariadb").unwrap(),
+            Database::MariaDB
+        ));
 
         // Test MySQL scheme
         assert!(matches!(Database::new("mysql").unwrap(), Database::MySQL));
 
         // Test SQLite schemes
         assert!(matches!(Database::new("sqlite").unwrap(), Database::SQLite));
-        assert!(matches!(Database::new("sqlite3").unwrap(), Database::SQLite));
+        assert!(matches!(
+            Database::new("sqlite3").unwrap(),
+            Database::SQLite
+        ));
     }
 
     #[test]

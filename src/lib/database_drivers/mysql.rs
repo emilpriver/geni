@@ -585,8 +585,10 @@ mod tests {
         fn _test_fields() {
             let _check_url: fn(&MySQLDriver) -> &String = |driver| &driver.url;
             let _check_db_name: fn(&MySQLDriver) -> &String = |driver| &driver.db_name;
-            let _check_migrations_table: fn(&MySQLDriver) -> &String = |driver| &driver.migrations_table;
-            let _check_migrations_folder: fn(&MySQLDriver) -> &String = |driver| &driver.migrations_folder;
+            let _check_migrations_table: fn(&MySQLDriver) -> &String =
+                |driver| &driver.migrations_table;
+            let _check_migrations_folder: fn(&MySQLDriver) -> &String =
+                |driver| &driver.migrations_folder;
             let _check_schema_file: fn(&MySQLDriver) -> &String = |driver| &driver.schema_file;
         }
 
@@ -638,8 +640,8 @@ mod tests {
             ("mysql://user@localhost/db", true),
             ("mysql://user:pass@localhost:3306/db", true),
             ("MySQL://localhost/db", false), // case sensitive
-            ("mysql://", true), // minimal valid
-            ("mysql:localhost/db", false), // missing //
+            ("mysql://", true),              // minimal valid
+            ("mysql:localhost/db", false),   // missing //
             ("postgres://localhost/db", false),
             ("mariadb://localhost/db", false),
         ];
@@ -656,13 +658,7 @@ mod tests {
 
     #[test]
     fn test_mysql_special_database_names() {
-        let special_names = vec![
-            "test_db",
-            "test-db",
-            "test123",
-            "migrations_v2",
-            "TestDB",
-        ];
+        let special_names = vec!["test_db", "test-db", "test123", "migrations_v2", "TestDB"];
 
         for name in special_names {
             let create_query = generate_mysql_create_db_query(name);
@@ -685,10 +681,19 @@ mod tests {
         let test_cases = vec![
             ("mysql://localhost:3306/db", "mysql://127.0.0.1:3306/db"),
             ("mysql://localhost/db", "mysql://127.0.0.1/db"),
-            ("mysql://user@localhost:3306/db", "mysql://user@127.0.0.1:3306/db"),
-            ("mysql://user:pass@localhost:3306/db", "mysql://user:pass@127.0.0.1:3306/db"),
+            (
+                "mysql://user@localhost:3306/db",
+                "mysql://user@127.0.0.1:3306/db",
+            ),
+            (
+                "mysql://user:pass@localhost:3306/db",
+                "mysql://user:pass@127.0.0.1:3306/db",
+            ),
             ("mysql://127.0.0.1:3306/db", "mysql://127.0.0.1:3306/db"), // unchanged
-            ("mysql://192.168.1.100:3306/db", "mysql://192.168.1.100:3306/db"), // unchanged
+            (
+                "mysql://192.168.1.100:3306/db",
+                "mysql://192.168.1.100:3306/db",
+            ), // unchanged
             ("mysql://example.com:3306/db", "mysql://example.com:3306/db"), // unchanged
         ];
 

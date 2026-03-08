@@ -57,7 +57,9 @@ pub async fn up(
             let query = read_file_content(&f.1);
             let run_in_transaction = utils::should_run_in_transaction(&query);
 
-            if let Err(e) = database.execute(&query, run_in_transaction).await { bail!(e) }
+            if let Err(e) = database.execute(&query, run_in_transaction).await {
+                bail!(e)
+            }
 
             database.insert_schema_migration(&id).await?;
         }
@@ -127,7 +129,9 @@ pub async fn down(
                 let query = read_file_content(&f.1);
                 let run_in_transaction = utils::should_run_in_transaction(&query);
 
-                if let Err(e) = database.execute(&query, run_in_transaction).await { bail!(e) }
+                if let Err(e) = database.execute(&query, run_in_transaction).await {
+                    bail!(e)
+                }
 
                 database
                     .remove_schema_migration(migration.to_string().as_str())
@@ -159,7 +163,10 @@ mod tests {
         let files = vec![];
         let result = validate_migration_files(&files, "./migrations", "up");
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Didn't find any files ending with .up.sql"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Didn't find any files ending with .up.sql"));
     }
 
     #[test]
@@ -239,10 +246,7 @@ mod tests {
 
     #[test]
     fn test_get_migrations_to_rollback_more_than_available() {
-        let applied_migrations = vec![
-            "1234567890".to_string(),
-            "1234567891".to_string(),
-        ];
+        let applied_migrations = vec!["1234567890".to_string(), "1234567891".to_string()];
 
         let result = get_migrations_to_rollback(applied_migrations, 5).unwrap();
         assert_eq!(result.len(), 2); // Should return all available
@@ -252,10 +256,7 @@ mod tests {
 
     #[test]
     fn test_get_migrations_to_rollback_zero() {
-        let applied_migrations = vec![
-            "1234567890".to_string(),
-            "1234567891".to_string(),
-        ];
+        let applied_migrations = vec!["1234567890".to_string(), "1234567891".to_string()];
 
         let result = get_migrations_to_rollback(applied_migrations, 0).unwrap();
         assert_eq!(result.len(), 0);
@@ -287,7 +288,11 @@ mod tests {
         let result = find_rollback_file(&files, 1234567891);
         assert!(result.is_some());
         assert_eq!(result.unwrap().0, 1234567891);
-        assert!(result.unwrap().1.to_string_lossy().contains("1234567891_test.down.sql"));
+        assert!(result
+            .unwrap()
+            .1
+            .to_string_lossy()
+            .contains("1234567891_test.down.sql"));
     }
 
     #[test]
@@ -330,7 +335,8 @@ mod tests {
 
         // Test down migration validation
         let down_files = get_local_migrations(&migration_folder.to_path_buf(), "down").unwrap();
-        let result = validate_migration_files(&down_files, migration_folder.to_str().unwrap(), "down");
+        let result =
+            validate_migration_files(&down_files, migration_folder.to_str().unwrap(), "down");
         assert!(result.is_ok());
     }
 

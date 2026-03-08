@@ -584,8 +584,10 @@ mod tests {
         fn _test_fields() {
             let _check_url: fn(&PostgresDriver) -> &String = |driver| &driver.url;
             let _check_db_name: fn(&PostgresDriver) -> &String = |driver| &driver.db_name;
-            let _check_migrations_table: fn(&PostgresDriver) -> &String = |driver| &driver.migrations_table;
-            let _check_migrations_folder: fn(&PostgresDriver) -> &String = |driver| &driver.migrations_folder;
+            let _check_migrations_table: fn(&PostgresDriver) -> &String =
+                |driver| &driver.migrations_table;
+            let _check_migrations_folder: fn(&PostgresDriver) -> &String =
+                |driver| &driver.migrations_folder;
             let _check_schema_file: fn(&PostgresDriver) -> &String = |driver| &driver.schema_file;
         }
 
@@ -595,12 +597,7 @@ mod tests {
     #[test]
     fn test_postgres_query_generation_edge_cases() {
         // Test with special characters that might need escaping
-        let special_names = vec![
-            "test_db",
-            "test-db",
-            "test123",
-            "migrations_v2",
-        ];
+        let special_names = vec!["test_db", "test-db", "test123", "migrations_v2"];
 
         for name in special_names {
             let create_query = generate_postgres_create_db_query(name);
@@ -626,8 +623,8 @@ mod tests {
             ("postgresql://localhost/db", true),
             ("psql://localhost/db", true),
             ("POSTGRES://localhost/db", false), // case sensitive
-            ("postgres://", true), // minimal valid
-            ("postgres:localhost/db", false), // missing //
+            ("postgres://", true),              // minimal valid
+            ("postgres:localhost/db", false),   // missing //
             ("http://localhost/db", false),
             ("mysql://localhost/db", false),
         ];

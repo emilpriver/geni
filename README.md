@@ -123,6 +123,25 @@ geni help   # Print help message
         - LibSQL: `https://localhost:6000`
             - The protocol for LibSQL is https.
             - For turso uses: This is something you can retrieve using Turso CLI or the website
+    - When using SSH tunneling, keep `DATABASE_URL` pointed at the remote/private database host. Geni will rewrite it to a local forwarded address at runtime.
+- `DATABASE_SSH_HOST`
+    - Enables SSH tunneling for supported local CLI commands.
+    - Accepts either a raw SSH host or a `~/.ssh/config` host alias.
+- `DATABASE_SSH_USER`
+    - Optional SSH username override.
+- `DATABASE_SSH_PORT`
+    - Optional SSH port override.
+- `DATABASE_SSH_IDENTITY_FILE`
+    - Optional SSH identity file override.
+- `DATABASE_SSH_LOCAL_PORT`
+    - Optional local port to bind for the tunnel.
+    - Default: an available `127.0.0.1` port chosen by geni
+- `DATABASE_SSH_REMOTE_HOST`
+    - Optional remote host reachable from the SSH server.
+    - Default: the host from `DATABASE_URL`
+- `DATABASE_SSH_REMOTE_PORT`
+    - Optional remote port reachable from the SSH server.
+    - Default: the port from `DATABASE_URL`, or `5432` for Postgres and `3306` for MySQL/MariaDB
 - `DATABASE_TOKEN`
     - Only if you use `Turso` and `LibSQL` and require token to authenticate. If not specified will Geni try to migrate without any auth
 - `DATABASE_WAIT_TIMEOUT`
@@ -187,6 +206,12 @@ Running migration can be done using
 geni up
 ```
 
+You can also pass the database URL as a flag instead of an environment variable:
+
+```bash
+geni --database-url "postgres://postgres@127.0.0.1:5432/app?sslmode=disable" up
+```
+
 ### Rollback migrations
 
 Rollbacking last added migrations can be done using
@@ -206,6 +231,29 @@ geni down -a 3
 ```bash
 DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
 ```
+
+### Running through an SSH tunnel
+
+SSH tunneling is supported for local CLI usage with Postgres, MySQL, and MariaDB URLs.
+
+```bash
+geni \
+  --database-url "postgres://app:secret@db.internal:5432/app?sslmode=disable" \
+  --ssh-host "prod-bastion" \
+  up
+```
+
+If the database is only reachable as `localhost` from the SSH server, keep the SSH host separate and override the remote target:
+
+```bash
+geni \
+  --database-url "postgres://app:secret@localhost:5432/app?sslmode=disable" \
+  --ssh-host "prod-bastion" \
+  --ssh-remote-host "127.0.0.1" \
+  up
+```
+
+V1 tunnel support is local CLI only. The published Docker image and GitHub Action still expect direct database connectivity.
 
 ### Github Workflow
 
@@ -267,5 +315,4 @@ async fn main() {
     ()
 }
 ```
-
 
