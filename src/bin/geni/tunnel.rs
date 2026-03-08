@@ -105,7 +105,7 @@ pub async fn establish_tunnel(
 
 fn build_tunnel_plan(database_url: &str, config: SshTunnelConfig) -> Result<TunnelPlan> {
     let mut parsed_database_url = Url::parse(database_url)
-        .with_context(|| format!("invalid database URL: {}", database_url))?;
+        .with_context(|| format!("invalid database URL: {}", redact_database_url(database_url)))?;
     let scheme = parsed_database_url.scheme().to_string();
 
     ensure_supported_tunnel_scheme(&scheme)?;
