@@ -127,12 +127,16 @@ geni help   # Print help message
 - `DATABASE_SSH_HOST`
     - Enables SSH tunneling for supported local CLI commands.
     - Accepts either a raw SSH host or a `~/.ssh/config` host alias.
+    - When you pass an alias, geni uses the system `ssh` client, so OpenSSH settings such as `HostName`, `User`, `Port`, `IdentityAgent`, `ProxyJump`, and related auth settings are honored automatically.
 - `DATABASE_SSH_USER`
     - Optional SSH username override.
+    - If omitted, OpenSSH config and defaults are used.
 - `DATABASE_SSH_PORT`
     - Optional SSH port override.
+    - If omitted, OpenSSH config and defaults are used.
 - `DATABASE_SSH_IDENTITY_FILE`
     - Optional SSH identity file override.
+    - If omitted, geni leaves identity selection to the system `ssh` client, including `ssh-agent` and `IdentityAgent` from `~/.ssh/config`.
 - `DATABASE_SSH_LOCAL_PORT`
     - Optional local port to bind for the tunnel.
     - Default: an available `127.0.0.1` port chosen by geni
@@ -243,6 +247,25 @@ geni \
   up
 ```
 
+Because geni shells out to the system `ssh` client, you can also rely on `~/.ssh/config` for connection details and agent selection. Example with an OpenSSH alias and the 1Password SSH agent:
+
+```sshconfig
+Host vps
+  HostName your-server.example.com
+  User root
+  Port 22
+  IdentityAgent "~/.1password/agent.sock"
+```
+
+Then run:
+
+```bash
+geni \
+  --database-url "postgres://app:secret@db.internal:5432/app?sslmode=disable" \
+  --ssh-host "vps" \
+  up
+```
+
 If the database is only reachable as `localhost` from the SSH server, keep the SSH host separate and override the remote target:
 
 ```bash
@@ -315,4 +338,3 @@ async fn main() {
     ()
 }
 ```
-

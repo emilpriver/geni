@@ -155,19 +155,19 @@ fn database_args() -> [Arg; 8] {
             .long("ssh-user")
             .global(true)
             .env("DATABASE_SSH_USER")
-            .help("SSH username override for the tunnel"),
+            .help("SSH username override; omit to use OpenSSH config/defaults"),
         Arg::new("ssh-port")
             .long("ssh-port")
             .global(true)
             .env("DATABASE_SSH_PORT")
             .value_parser(value_parser!(u16))
-            .help("SSH port override for the tunnel"),
+            .help("SSH port override; omit to use OpenSSH config/defaults"),
         Arg::new("ssh-identity-file")
             .long("ssh-identity-file")
             .global(true)
             .env("DATABASE_SSH_IDENTITY_FILE")
             .value_parser(value_parser!(PathBuf))
-            .help("SSH identity file used when opening the tunnel"),
+            .help("SSH identity file override; omit to use ssh-agent or IdentityAgent from OpenSSH config"),
         Arg::new("ssh-local-port")
             .long("ssh-local-port")
             .global(true)
