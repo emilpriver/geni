@@ -81,10 +81,7 @@ mod tests {
             (1234567891, PathBuf::from("1234567891_add_index.up.sql")),
         ];
 
-        let migrations = vec![
-            "1234567890".to_string(),
-            "1234567891".to_string(),
-        ];
+        let migrations = vec!["1234567890".to_string(), "1234567891".to_string()];
 
         // This should not log any pending migrations
         compare_migrations_and_log(files, migrations, false);
@@ -123,11 +120,12 @@ mod tests {
         // Create a real file for verbose test
         let file_path = tmp_dir.path().join("1234567893_verbose_test.up.sql");
         let mut file = File::create(&file_path).unwrap();
-        file.write_all(b"CREATE TABLE verbose_test;\nALTER TABLE users ADD COLUMN email VARCHAR(255);").unwrap();
+        file.write_all(
+            b"CREATE TABLE verbose_test;\nALTER TABLE users ADD COLUMN email VARCHAR(255);",
+        )
+        .unwrap();
 
-        let files = vec![
-            (1234567893, file_path),
-        ];
+        let files = vec![(1234567893, file_path)];
 
         let migrations = vec![]; // No migrations in database
 
@@ -146,9 +144,7 @@ mod tests {
 
     #[test]
     fn test_compare_migrations_and_log_empty_migrations() {
-        let files = vec![
-            (1234567890, PathBuf::from("1234567890_test.up.sql")),
-        ];
+        let files = vec![(1234567890, PathBuf::from("1234567890_test.up.sql"))];
         let migrations = vec![];
 
         // All files should be considered pending

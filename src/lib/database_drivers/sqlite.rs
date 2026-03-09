@@ -270,7 +270,8 @@ mod tests {
                 _migrations_table.clone(),
                 _migrations_folder.clone(),
                 _schema_file.clone(),
-            ).await?;
+            )
+            .await?;
             Ok::<(), anyhow::Error>(())
         };
 
@@ -284,8 +285,10 @@ mod tests {
 
         fn _test_fields() {
             let _check_path: fn(&SqliteDriver) -> &String = |driver| &driver.path;
-            let _check_migrations_table: fn(&SqliteDriver) -> &String = |driver| &driver.migrations_table;
-            let _check_migrations_folder: fn(&SqliteDriver) -> &String = |driver| &driver.migrations_folder;
+            let _check_migrations_table: fn(&SqliteDriver) -> &String =
+                |driver| &driver.migrations_table;
+            let _check_migrations_folder: fn(&SqliteDriver) -> &String =
+                |driver| &driver.migrations_folder;
             let _check_schema_file: fn(&SqliteDriver) -> &String = |driver| &driver.schema_file;
         }
 
@@ -324,10 +327,18 @@ mod tests {
 
         for url in urls {
             let path = parse_sqlite_path(url);
-            assert!(!path.is_empty(), "Path should not be empty for URL: {}", url);
+            assert!(
+                !path.is_empty(),
+                "Path should not be empty for URL: {}",
+                url
+            );
 
             if url.contains("://") {
-                assert!(!path.contains("://"), "Path should not contain scheme for URL: {}", url);
+                assert!(
+                    !path.contains("://"),
+                    "Path should not contain scheme for URL: {}",
+                    url
+                );
             }
         }
     }
@@ -336,10 +347,10 @@ mod tests {
     fn test_path_validation() {
         // Test that paths are correctly identified as relative or absolute
         let test_cases = vec![
-            ("./test.db", false), // relative
-            ("../test.db", false), // relative
-            ("test.db", false), // relative
-            ("/tmp/test.db", true), // absolute
+            ("./test.db", false),              // relative
+            ("../test.db", false),             // relative
+            ("test.db", false),                // relative
+            ("/tmp/test.db", true),            // absolute
             ("/var/lib/sqlite/test.db", true), // absolute
         ];
 
@@ -356,14 +367,15 @@ mod tests {
 
     #[test]
     fn test_memory_database_detection() {
-        let memory_urls = vec![
-            "sqlite://:memory:",
-            ":memory:",
-        ];
+        let memory_urls = vec!["sqlite://:memory:", ":memory:"];
 
         for url in memory_urls {
             let path = parse_sqlite_path(url);
-            assert_eq!(path, ":memory:", "Memory database not detected for: {}", url);
+            assert_eq!(
+                path, ":memory:",
+                "Memory database not detected for: {}",
+                url
+            );
         }
     }
 }

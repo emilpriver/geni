@@ -1,8 +1,20 @@
-use clap::{crate_authors, crate_description, crate_version, Arg, ArgAction, Command};
 use log::{error, info};
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger, TerminalMode};
 
 mod config;
+mod tunnel;
+
+async fn resolve_database_connection_or_exit(
+    matches: &clap::ArgMatches,
+) -> Option<config::ResolvedDatabaseConnection> {
+    match config::resolve_database_connection(matches).await {
+        Ok(connection) => Some(connection),
+        Err(err) => {
+            error!("{:?}", err);
+            None
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -14,43 +26,7 @@ async fn main() {
     )
     .expect("Failed to initialize logger");
 
-    let matches = Command::new("geni")
-        .about(crate_description!())
-        .version(format!("v{}", crate_version!()))
-        .subcommand_required(true)
-        .arg_required_else_help(true)
-        .name("geni")
-        .author(crate_authors!())
-        .subcommands([
-            Command::new("new")
-                .about("Create new migration")
-                .arg(Arg::new("name").required(true).index(1)),
-            Command::new("up").about("Migrate to the latest version"),
-            Command::new("down")
-                .about("Rollback to last migration")
-                .arg(
-                    Arg::new("amount")
-                        .short('a')
-                        .long("amount")
-                        .help("Amount of migrations to rollback")
-                        .action(ArgAction::Set)
-                        .num_args(0..=1),
-                ),
-            Command::new("create").about("Create database"),
-            Command::new("drop").about("Drop database"),
-            Command::new("status")
-                .about("Show current migrations to apply")
-                .arg(
-                    Arg::new("verbose")
-                        .short('v')
-                        .long("verbose")
-                        .help("Include migration content for the non applied migrations")
-                        .action(ArgAction::Set)
-                        .num_args(0..=1),
-                ),
-            Command::new("dump").about("Dump database structure"),
-        ])
-        .get_matches();
+    let matches = config::cli_command().get_matches();
 
     let migration_path = config::migration_folder();
     let wait_timeout = config::wait_timeout();
@@ -58,8 +34,6 @@ async fn main() {
     let migrations_folder = config::migration_folder();
     let schema_file = config::schema_file();
     let dump_schema = config::dump_schema_file();
-
-    let database_token = config::database_token();
 
     match matches.subcommand() {
         Some(("new", query_matches)) => {
@@ -73,15 +47,12 @@ async fn main() {
             };
         }
         Some(("create", ..)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
+            let Some(database_connection) = resolve_database_connection_or_exit(&matches).await
+            else {
+                return;
             };
+            let database_url = database_connection.database_url.clone();
+            let database_token = database_connection.database_token.clone();
 
             match geni::create_database(
                 database_url,
@@ -101,15 +72,12 @@ async fn main() {
             };
         }
         Some(("drop", ..)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
+            let Some(database_connection) = resolve_database_connection_or_exit(&matches).await
+            else {
+                return;
             };
+            let database_url = database_connection.database_url.clone();
+            let database_token = database_connection.database_token.clone();
 
             match geni::drop_database(
                 database_url,
@@ -129,15 +97,12 @@ async fn main() {
             };
         }
         Some(("up", ..)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
+            let Some(database_connection) = resolve_database_connection_or_exit(&matches).await
+            else {
+                return;
             };
+            let database_url = database_connection.database_url.clone();
+            let database_token = database_connection.database_token.clone();
 
             match geni::migrate_database(
                 database_url,
@@ -158,15 +123,12 @@ async fn main() {
             };
         }
         Some(("down", query_matches)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
+            let Some(database_connection) = resolve_database_connection_or_exit(&matches).await
+            else {
+                return;
             };
+            let database_url = database_connection.database_url.clone();
+            let database_token = database_connection.database_token.clone();
             let rollback_amount = query_matches
                 .get_one::<String>("amount")
                 .unwrap_or(&"1".to_string())
@@ -193,15 +155,12 @@ async fn main() {
             };
         }
         Some(("status", query_matches)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
+            let Some(database_connection) = resolve_database_connection_or_exit(&matches).await
+            else {
+                return;
             };
+            let database_url = database_connection.database_url.clone();
+            let database_token = database_connection.database_token.clone();
 
             let verbose = query_matches.contains_id("verbose");
 
@@ -221,15 +180,12 @@ async fn main() {
             }
         }
         Some(("dump", ..)) => {
-            let database_url = match config::database_url() {
-                Ok(url) => url,
-                Err(..) => {
-                    error!(
-                        "No database url found, please set the DATABASE_URL environment variable"
-                    );
-                    return;
-                }
+            let Some(database_connection) = resolve_database_connection_or_exit(&matches).await
+            else {
+                return;
             };
+            let database_url = database_connection.database_url.clone();
+            let database_token = database_connection.database_token.clone();
 
             match geni::dump_database(
                 database_url,

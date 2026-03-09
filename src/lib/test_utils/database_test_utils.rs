@@ -30,7 +30,9 @@ pub fn validate_libsql_url(db_url: &str) -> Result<bool> {
     }
 
     let valid_schemes = ["http://", "https://", "libsql://"];
-    let is_valid = valid_schemes.iter().any(|scheme| db_url.starts_with(scheme));
+    let is_valid = valid_schemes
+        .iter()
+        .any(|scheme| db_url.starts_with(scheme));
 
     if !is_valid {
         bail!("Invalid LibSQL URL scheme. Must start with http://, https://, or libsql://");
@@ -52,8 +54,13 @@ pub fn get_auth_token_or_default(token: Option<String>) -> String {
 
 /// Helper function to validate PostgreSQL connection URL for testing
 pub fn validate_postgres_url(url: &str) -> Result<bool> {
-    if !url.starts_with("postgres://") && !url.starts_with("postgresql://") && !url.starts_with("psql://") {
-        bail!("Invalid PostgreSQL URL scheme. Must start with postgres://, postgresql://, or psql://");
+    if !url.starts_with("postgres://")
+        && !url.starts_with("postgresql://")
+        && !url.starts_with("psql://")
+    {
+        bail!(
+            "Invalid PostgreSQL URL scheme. Must start with postgres://, postgresql://, or psql://"
+        );
     }
     Ok(true)
 }

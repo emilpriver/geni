@@ -585,8 +585,10 @@ mod tests {
         fn _test_fields() {
             let _check_url: fn(&MariaDBDriver) -> &String = |driver| &driver.url;
             let _check_db_name: fn(&MariaDBDriver) -> &String = |driver| &driver.db_name;
-            let _check_migrations_table: fn(&MariaDBDriver) -> &String = |driver| &driver.migrations_table;
-            let _check_migrations_folder: fn(&MariaDBDriver) -> &String = |driver| &driver.migrations_folder;
+            let _check_migrations_table: fn(&MariaDBDriver) -> &String =
+                |driver| &driver.migrations_table;
+            let _check_migrations_folder: fn(&MariaDBDriver) -> &String =
+                |driver| &driver.migrations_folder;
             let _check_schema_file: fn(&MariaDBDriver) -> &String = |driver| &driver.schema_file;
         }
 
@@ -636,8 +638,8 @@ mod tests {
             ("mariadb://user@localhost/db", true),
             ("mariadb://user:pass@localhost:3306/db", true),
             ("MariaDB://localhost/db", false), // case sensitive
-            ("mariadb://", true), // minimal valid
-            ("mariadb:localhost/db", false), // missing //
+            ("mariadb://", true),              // minimal valid
+            ("mariadb:localhost/db", false),   // missing //
             ("mysql://localhost/db", false),
             ("postgres://localhost/db", false),
         ];
@@ -670,11 +672,23 @@ mod tests {
         let test_cases = vec![
             ("mariadb://localhost:3306/db", "mariadb://127.0.0.1:3306/db"),
             ("mariadb://localhost/db", "mariadb://127.0.0.1/db"),
-            ("mariadb://user@localhost:3306/db", "mariadb://user@127.0.0.1:3306/db"),
-            ("mariadb://user:pass@localhost:3306/db", "mariadb://user:pass@127.0.0.1:3306/db"),
+            (
+                "mariadb://user@localhost:3306/db",
+                "mariadb://user@127.0.0.1:3306/db",
+            ),
+            (
+                "mariadb://user:pass@localhost:3306/db",
+                "mariadb://user:pass@127.0.0.1:3306/db",
+            ),
             ("mariadb://127.0.0.1:3306/db", "mariadb://127.0.0.1:3306/db"), // unchanged
-            ("mariadb://192.168.1.100:3306/db", "mariadb://192.168.1.100:3306/db"), // unchanged
-            ("mariadb://maria.example.com:3306/db", "mariadb://maria.example.com:3306/db"), // unchanged
+            (
+                "mariadb://192.168.1.100:3306/db",
+                "mariadb://192.168.1.100:3306/db",
+            ), // unchanged
+            (
+                "mariadb://maria.example.com:3306/db",
+                "mariadb://maria.example.com:3306/db",
+            ), // unchanged
         ];
 
         for (input, expected) in test_cases {

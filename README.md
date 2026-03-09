@@ -123,6 +123,29 @@ geni help   # Print help message
         - LibSQL: `https://localhost:6000`
             - The protocol for LibSQL is https.
             - For turso uses: This is something you can retrieve using Turso CLI or the website
+    - When using SSH tunneling, keep `DATABASE_URL` pointed at the remote/private database host. Geni will rewrite it to a local forwarded address at runtime.
+- `DATABASE_SSH_HOST`
+    - Enables SSH tunneling for supported local CLI commands.
+    - Accepts either a raw SSH host or a `~/.ssh/config` host alias.
+    - When you pass an alias, geni uses the system `ssh` client, so OpenSSH settings such as `HostName`, `User`, `Port`, `IdentityAgent`, `ProxyJump`, and related auth settings are honored automatically.
+- `DATABASE_SSH_USER`
+    - Optional SSH username override.
+    - If omitted, OpenSSH config and defaults are used.
+- `DATABASE_SSH_PORT`
+    - Optional SSH port override.
+    - If omitted, OpenSSH config and defaults are used.
+- `DATABASE_SSH_IDENTITY_FILE`
+    - Optional SSH identity file override.
+    - If omitted, geni leaves identity selection to the system `ssh` client, including `ssh-agent` and `IdentityAgent` from `~/.ssh/config`.
+- `DATABASE_SSH_LOCAL_PORT`
+    - Optional local port to bind for the tunnel.
+    - Default: a local port chosen by geni from `60000..=65000`
+- `DATABASE_SSH_REMOTE_HOST`
+    - Optional remote host reachable from the SSH server.
+    - Default: the host from `DATABASE_URL`
+- `DATABASE_SSH_REMOTE_PORT`
+    - Optional remote port reachable from the SSH server.
+    - Default: the port from `DATABASE_URL`, or `5432` for Postgres and `3306` for MySQL/MariaDB
 - `DATABASE_TOKEN`
     - Only if you use `Turso` and `LibSQL` and require token to authenticate. If not specified will Geni try to migrate without any auth
 - `DATABASE_WAIT_TIMEOUT`
@@ -187,6 +210,12 @@ Running migration can be done using
 geni up
 ```
 
+You can also pass the database URL as a flag instead of an environment variable:
+
+```bash
+geni --database-url "postgres://postgres@127.0.0.1:5432/app?sslmode=disable" up
+```
+
 ### Rollback migrations
 
 Rollbacking last added migrations can be done using
@@ -206,6 +235,50 @@ geni down -a 3
 ```bash
 DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
 ```
+
+### Running through an SSH tunnel
+
+SSH tunneling is supported for local CLI usage with Postgres, MySQL, and MariaDB URLs.
+
+If you do not specify `--ssh-local-port`, geni will try high local ports in `60000..=65000` until OpenSSH successfully binds one. Use `--ssh-local-port` or `DATABASE_SSH_LOCAL_PORT` if you want a deterministic local port. If that explicit port is already in use, tunnel startup fails immediately.
+
+```bash
+geni \
+  --database-url "postgres://app:secret@db.internal:5432/app?sslmode=disable" \
+  --ssh-host "prod-bastion" \
+  up
+```
+
+Because geni shells out to the system `ssh` client, you can also rely on `~/.ssh/config` for connection details and agent selection. Example with an OpenSSH alias and the 1Password SSH agent:
+
+```sshconfig
+Host vps
+  HostName your-server.example.com
+  User root
+  Port 22
+  IdentityAgent "~/.1password/agent.sock"
+```
+
+Then run:
+
+```bash
+geni \
+  --database-url "postgres://app:secret@db.internal:5432/app?sslmode=disable" \
+  --ssh-host "vps" \
+  up
+```
+
+If the database is only reachable as `localhost` from the SSH server, keep the SSH host separate and override the remote target:
+
+```bash
+geni \
+  --database-url "postgres://app:secret@localhost:5432/app?sslmode=disable" \
+  --ssh-host "prod-bastion" \
+  --ssh-remote-host "127.0.0.1" \
+  up
+```
+
+V1 tunnel support is local CLI only. The published Docker image and GitHub Action still expect direct database connectivity.
 
 ### Github Workflow
 
@@ -267,5 +340,3 @@ async fn main() {
     ()
 }
 ```
-
-

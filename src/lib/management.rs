@@ -58,7 +58,8 @@ mod tests {
         // Test that the create function has the expected signature
         // This is a compile-time test - if this compiles, the signature is correct
 
-        let _create_fn: fn(String, Option<String>, Option<usize>, String, String, String) -> _ = create;
+        let _create_fn: fn(String, Option<String>, Option<usize>, String, String, String) -> _ =
+            create;
 
         // Test that parameters are in the expected order
         let _database_url = "sqlite://test.db".to_string();
@@ -175,12 +176,12 @@ mod tests {
         // This helps ensure API consistency
 
         let params = (
-            "sqlite://test.db".to_string(),    // database_url
-            None::<String>,                    // db_token
-            Some(30_usize),                    // wait_timeout
-            "migrations".to_string(),          // migrations_table
-            "./migrations".to_string(),        // migrations_folder
-            "schema.sql".to_string(),          // schema_file
+            "sqlite://test.db".to_string(), // database_url
+            None::<String>,                 // db_token
+            Some(30_usize),                 // wait_timeout
+            "migrations".to_string(),       // migrations_table
+            "./migrations".to_string(),     // migrations_folder
+            "schema.sql".to_string(),       // schema_file
         );
 
         // Both functions should accept the same parameters in the same order
@@ -193,14 +194,7 @@ mod tests {
             params.5.clone(),
         );
 
-        let _drop_future = drop(
-            params.0,
-            params.1,
-            params.2,
-            params.3,
-            params.4,
-            params.5,
-        );
+        let _drop_future = drop(params.0, params.1, params.2, params.3, params.4, params.5);
 
         assert!(true);
     }

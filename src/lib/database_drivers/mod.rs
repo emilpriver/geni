@@ -161,7 +161,6 @@ pub async fn new(
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -288,13 +287,13 @@ mod tests {
         // This is a compile-time test to ensure API consistency
 
         let _params = (
-            "sqlite://test.db".to_string(),           // db_url
-            None::<String>,                           // db_token
-            "schema_migrations".to_string(),          // migrations_table
-            "./migrations".to_string(),               // migrations_folder
-            "schema.sql".to_string(),                 // schema_file
-            Some(30_usize),                          // wait_timeout
-            true,                                     // with_selected_database
+            "sqlite://test.db".to_string(),  // db_url
+            None::<String>,                  // db_token
+            "schema_migrations".to_string(), // migrations_table
+            "./migrations".to_string(),      // migrations_folder
+            "schema.sql".to_string(),        // schema_file
+            Some(30_usize),                  // wait_timeout
+            true,                            // with_selected_database
         );
 
         // Test that the function accepts these parameter types
@@ -327,10 +326,7 @@ mod tests {
     #[test]
     fn test_postgresql_scheme_normalization() {
         // Test that postgres/psql schemes get normalized to postgresql
-        let test_urls = vec![
-            "postgres://localhost/test",
-            "psql://localhost/test",
-        ];
+        let test_urls = vec!["postgres://localhost/test", "psql://localhost/test"];
 
         for url in test_urls {
             let mut parsed_url = url::Url::parse(url).unwrap();
