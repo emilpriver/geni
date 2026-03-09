@@ -1,15 +1,18 @@
 use anyhow::{bail, Context, Result};
 use log::info;
 use std::ffi::OsString;
-use std::net::TcpListener;
+use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::time::Duration;
-use tokio::net::TcpStream;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::process::{Child, Command};
 use tokio::time::{sleep, Instant};
 use url::Url;
 use which::which;
+
+const AUTO_LOCAL_PORT_START: u16 = 60000;
+const AUTO_LOCAL_PORT_END: u16 = 65000;
+const AUTO_LOCAL_PORT_COUNT: u16 = AUTO_LOCAL_PORT_END - AUTO_LOCAL_PORT_START + 1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SshTunnelConfig {
@@ -35,10 +38,22 @@ pub struct SshTunnelGuard {
 struct TunnelPlan {
     ssh_destination: String,
     ssh_args: Vec<OsString>,
-    local_port: u16,
+    requested_local_port: Option<u16>,
     remote_host: String,
     remote_port: u16,
-    rewritten_database_url: String,
+    database_url: Url,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SshLogState {
+    None,
+    Listening,
+    PortInUse,
+}
+
+enum TunnelAttemptError {
+    PortInUse,
+    Fatal(anyhow::Error),
 }
 
 impl SshTunnelGuard {
@@ -78,34 +93,63 @@ pub async fn establish_tunnel(
 ) -> Result<EstablishedTunnel> {
     let plan = build_tunnel_plan(&database_url, config)?;
     let ssh_binary = find_ssh_binary()?;
+    let deadline = Instant::now() + Duration::from_secs(wait_timeout as u64);
+    let candidate_ports = local_port_candidates(plan.requested_local_port, auto_local_port_seed()?);
 
     info!(
         "Opening SSH tunnel via {} to {}:{}",
         plan.ssh_destination, plan.remote_host, plan.remote_port
     );
 
-    let mut child = spawn_ssh_tunnel(&ssh_binary, &plan)?;
+    for local_port in candidate_ports {
+        if plan.requested_local_port.is_none() && Instant::now() >= deadline {
+            break;
+        }
 
-    if let Err(error) = wait_for_tunnel_ready(&mut child, plan.local_port, wait_timeout).await {
-        let _ = child.start_kill();
-        let _ = child.wait().await;
-        return Err(error);
+        match try_start_ssh_tunnel(&ssh_binary, &plan, local_port, deadline, wait_timeout).await {
+            Ok(child) => {
+                let rewritten_database_url = rewrite_database_url(&plan.database_url, local_port)?;
+
+                info!(
+                    "Using local forwarded database address {}",
+                    redact_database_url(&rewritten_database_url)
+                );
+
+                return Ok(EstablishedTunnel {
+                    database_url: rewritten_database_url,
+                    guard: SshTunnelGuard::new(child),
+                });
+            }
+            Err(TunnelAttemptError::PortInUse) => {
+                if plan.requested_local_port.is_some() {
+                    bail!(
+                        "requested SSH tunnel local port {} is already in use",
+                        local_port
+                    );
+                }
+
+                if Instant::now() >= deadline {
+                    break;
+                }
+            }
+            Err(TunnelAttemptError::Fatal(error)) => return Err(error),
+        }
     }
 
-    info!(
-        "Using local forwarded database address {}",
-        redact_database_url(&plan.rewritten_database_url)
-    );
-
-    Ok(EstablishedTunnel {
-        database_url: plan.rewritten_database_url,
-        guard: SshTunnelGuard::new(child),
-    })
+    bail!(
+        "failed to allocate a local SSH tunnel port in {}..={}; specify --ssh-local-port to choose one explicitly",
+        AUTO_LOCAL_PORT_START,
+        AUTO_LOCAL_PORT_END
+    )
 }
 
 fn build_tunnel_plan(database_url: &str, config: SshTunnelConfig) -> Result<TunnelPlan> {
-    let mut parsed_database_url = Url::parse(database_url)
-        .with_context(|| format!("invalid database URL: {}", redact_database_url(database_url)))?;
+    let parsed_database_url = Url::parse(database_url).with_context(|| {
+        format!(
+            "invalid database URL: {}",
+            redact_database_url(database_url)
+        )
+    })?;
     let scheme = parsed_database_url.scheme().to_string();
 
     ensure_supported_tunnel_scheme(&scheme)?;
@@ -124,15 +168,6 @@ fn build_tunnel_plan(database_url: &str, config: SshTunnelConfig) -> Result<Tunn
                 anyhow::anyhow!("database URL must include a port or use a supported default port")
             })?,
     };
-
-    let local_port = select_local_port(config.local_port)?;
-
-    parsed_database_url
-        .set_host(Some("127.0.0.1"))
-        .context("failed to rewrite database URL host for SSH tunnel")?;
-    parsed_database_url
-        .set_port(Some(local_port))
-        .map_err(|()| anyhow::anyhow!("failed to rewrite database URL port for SSH tunnel"))?;
 
     let mut ssh_args = vec![
         OsString::from("-o"),
@@ -155,19 +190,13 @@ fn build_tunnel_plan(database_url: &str, config: SshTunnelConfig) -> Result<Tunn
         ssh_args.push(identity_file.into_os_string());
     }
 
-    ssh_args.push(OsString::from("-L"));
-    ssh_args.push(OsString::from(format!(
-        "127.0.0.1:{}:{}:{}",
-        local_port, remote_host, remote_port
-    )));
-
     Ok(TunnelPlan {
         ssh_destination: config.ssh_host,
         ssh_args,
-        local_port,
+        requested_local_port: config.local_port,
         remote_host,
         remote_port,
-        rewritten_database_url: parsed_database_url.to_string(),
+        database_url: parsed_database_url,
     })
 }
 
@@ -189,29 +218,139 @@ fn default_port_for_scheme(scheme: &str) -> Option<u16> {
     }
 }
 
-fn select_local_port(requested_port: Option<u16>) -> Result<u16> {
+fn local_port_candidates(requested_port: Option<u16>, seed: u16) -> Vec<u16> {
     if let Some(port) = requested_port {
-        return Ok(port);
+        return vec![port];
     }
 
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .context("failed to select a free local port for the SSH tunnel")?;
-    let port = listener
-        .local_addr()
-        .context("failed to determine the SSH tunnel local port")?
-        .port();
+    let start_offset = u32::from(seed % AUTO_LOCAL_PORT_COUNT);
+    let range_len = u32::from(AUTO_LOCAL_PORT_COUNT);
 
-    Ok(port)
+    (0..range_len)
+        .map(|offset| {
+            let candidate_offset = (start_offset + offset) % range_len;
+            AUTO_LOCAL_PORT_START + candidate_offset as u16
+        })
+        .collect()
+}
+
+fn auto_local_port_seed() -> Result<u16> {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .context("system clock is set before the UNIX epoch")?
+        .as_nanos();
+
+    Ok(((u128::from(std::process::id()) + timestamp) % u128::from(AUTO_LOCAL_PORT_COUNT)) as u16)
+}
+
+fn rewrite_database_url(database_url: &Url, local_port: u16) -> Result<String> {
+    let mut rewritten_database_url = database_url.clone();
+    rewritten_database_url
+        .set_host(Some("127.0.0.1"))
+        .context("failed to rewrite database URL host for SSH tunnel")?;
+    rewritten_database_url
+        .set_port(Some(local_port))
+        .map_err(|()| anyhow::anyhow!("failed to rewrite database URL port for SSH tunnel"))?;
+
+    Ok(rewritten_database_url.to_string())
 }
 
 fn find_ssh_binary() -> Result<PathBuf> {
     which("ssh").context("could not find `ssh` in PATH; install OpenSSH and try again")
 }
 
-fn spawn_ssh_tunnel(ssh_binary: &Path, plan: &TunnelPlan) -> Result<Child> {
+fn prepare_ssh_log_path() -> Result<PathBuf> {
+    let temp_dir = std::env::temp_dir();
+    let pid = std::process::id();
+
+    for attempt in 0..10u32 {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .context("system clock is set before the UNIX epoch")?
+            .as_nanos();
+        let path = temp_dir.join(format!("geni-ssh-{}-{}-{}.log", pid, timestamp, attempt));
+
+        match OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(_) => return Ok(path),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!("failed to create SSH startup log at {}", path.display())
+                });
+            }
+        }
+    }
+
+    bail!("failed to create a unique SSH startup log file")
+}
+
+fn cleanup_ssh_log(ssh_log_path: &Path) {
+    let _ = fs::remove_file(ssh_log_path);
+}
+
+async fn try_start_ssh_tunnel(
+    ssh_binary: &Path,
+    plan: &TunnelPlan,
+    local_port: u16,
+    deadline: Instant,
+    wait_timeout: usize,
+) -> std::result::Result<Child, TunnelAttemptError> {
+    let ssh_log_path = prepare_ssh_log_path().map_err(TunnelAttemptError::Fatal)?;
+    let mut child = match spawn_ssh_tunnel(ssh_binary, plan, local_port, &ssh_log_path) {
+        Ok(child) => child,
+        Err(error) => {
+            cleanup_ssh_log(&ssh_log_path);
+            return Err(TunnelAttemptError::Fatal(error));
+        }
+    };
+
+    let startup_result = wait_for_tunnel_attempt(
+        &mut child,
+        &ssh_log_path,
+        local_port,
+        deadline,
+        wait_timeout,
+    )
+    .await;
+
+    match startup_result {
+        Ok(()) => {
+            cleanup_ssh_log(&ssh_log_path);
+            Ok(child)
+        }
+        Err(TunnelAttemptError::PortInUse) => {
+            let _ = child.start_kill();
+            let _ = child.wait().await;
+            cleanup_ssh_log(&ssh_log_path);
+            Err(TunnelAttemptError::PortInUse)
+        }
+        Err(TunnelAttemptError::Fatal(error)) => {
+            let _ = child.start_kill();
+            let _ = child.wait().await;
+            cleanup_ssh_log(&ssh_log_path);
+            Err(TunnelAttemptError::Fatal(error))
+        }
+    }
+}
+
+fn spawn_ssh_tunnel(
+    ssh_binary: &Path,
+    plan: &TunnelPlan,
+    local_port: u16,
+    ssh_log_path: &Path,
+) -> Result<Child> {
     let mut command = Command::new(ssh_binary);
     command
         .args(plan.ssh_args.iter().map(OsString::as_os_str))
+        .arg("-L")
+        .arg(format!(
+            "127.0.0.1:{}:{}:{}",
+            local_port, plan.remote_host, plan.remote_port
+        ))
+        .arg("-o")
+        .arg("LogLevel=DEBUG1")
+        .arg("-E")
+        .arg(ssh_log_path)
         .arg(&plan.ssh_destination)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
@@ -222,38 +361,72 @@ fn spawn_ssh_tunnel(ssh_binary: &Path, plan: &TunnelPlan) -> Result<Child> {
         .with_context(|| format!("failed to start SSH tunnel using {}", ssh_binary.display()))
 }
 
-async fn wait_for_tunnel_ready(
+async fn wait_for_tunnel_attempt(
     child: &mut Child,
+    ssh_log_path: &Path,
     local_port: u16,
+    deadline: Instant,
     wait_timeout: usize,
-) -> Result<()> {
-    let timeout = Duration::from_secs(wait_timeout as u64);
-    let deadline = Instant::now() + timeout;
-
+) -> std::result::Result<(), TunnelAttemptError> {
     loop {
-        if let Some(status) = child
+        let log_state =
+            ssh_log_state(ssh_log_path, local_port).map_err(TunnelAttemptError::Fatal)?;
+        let status = child
             .try_wait()
-            .context("failed to check SSH tunnel process state")?
-        {
-            bail!(
-                "SSH tunnel exited before it became ready with status {}",
-                status
-            );
-        }
+            .context("failed to check SSH tunnel process state")
+            .map_err(TunnelAttemptError::Fatal)?;
 
-        if TcpStream::connect(("127.0.0.1", local_port)).await.is_ok() {
-            return Ok(());
+        match (log_state, status) {
+            (SshLogState::Listening, None) => return Ok(()),
+            (SshLogState::PortInUse, Some(_)) => return Err(TunnelAttemptError::PortInUse),
+            (_, Some(status)) => {
+                return Err(TunnelAttemptError::Fatal(anyhow::anyhow!(
+                    "SSH tunnel exited before it became ready with status {}",
+                    status
+                )));
+            }
+            _ => {}
         }
 
         if Instant::now() >= deadline {
-            bail!(
+            return Err(TunnelAttemptError::Fatal(anyhow::anyhow!(
                 "SSH tunnel did not become ready within {} seconds",
                 wait_timeout
-            );
+            )));
         }
 
         sleep(Duration::from_millis(100)).await;
     }
+}
+
+fn ssh_log_state(ssh_log_path: &Path, local_port: u16) -> Result<SshLogState> {
+    let log_contents = match fs::read_to_string(ssh_log_path) {
+        Ok(contents) => contents,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(SshLogState::None),
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!(
+                    "failed to read SSH startup log at {}",
+                    ssh_log_path.display()
+                )
+            });
+        }
+    };
+
+    if log_contents.contains(&format!(
+        "Local forwarding listening on 127.0.0.1 port {}.",
+        local_port
+    )) {
+        return Ok(SshLogState::Listening);
+    }
+
+    if log_contents.contains("Address already in use")
+        || log_contents.contains(&format!("cannot listen to port: {}", local_port))
+    {
+        return Ok(SshLogState::PortInUse);
+    }
+
+    Ok(SshLogState::None)
 }
 
 pub fn redact_database_url(database_url: &str) -> String {
@@ -304,6 +477,13 @@ mod tests {
         }
     }
 
+    fn local_port_from_database_url(database_url: &str) -> u16 {
+        Url::parse(database_url)
+            .unwrap()
+            .port()
+            .expect("database URL should include a port")
+    }
+
     #[test]
     fn test_build_tunnel_plan_defaults_remote_target_from_database_url() {
         let plan = build_tunnel_plan(
@@ -313,19 +493,23 @@ mod tests {
                 ssh_user: None,
                 ssh_port: None,
                 ssh_identity_file: None,
-                local_port: Some(6432),
+                local_port: None,
                 remote_host: None,
                 remote_port: None,
             },
         )
         .unwrap();
 
-        assert_eq!(plan.local_port, 6432);
+        assert_eq!(plan.requested_local_port, None);
         assert_eq!(plan.remote_host, "db.internal");
         assert_eq!(plan.remote_port, 5432);
         assert_eq!(
-            plan.rewritten_database_url,
-            "postgres://user:secret@127.0.0.1:6432/app?sslmode=disable"
+            plan.ssh_args,
+            vec![
+                OsString::from("-o"),
+                OsString::from("ExitOnForwardFailure=yes"),
+                OsString::from("-N"),
+            ]
         );
     }
 
@@ -345,8 +529,11 @@ mod tests {
         )
         .unwrap();
 
+        assert_eq!(plan.requested_local_port, Some(3307));
+        assert_eq!(plan.remote_host, "mysql.internal");
+        assert_eq!(plan.remote_port, 3308);
         assert_eq!(
-            plan.rewritten_database_url,
+            rewrite_database_url(&plan.database_url, 3307).unwrap(),
             "mysql://user:secret@127.0.0.1:3307/app?ssl-mode=DISABLED"
         );
         assert_eq!(
@@ -361,8 +548,6 @@ mod tests {
                 OsString::from("2202"),
                 OsString::from("-i"),
                 OsString::from("/tmp/id_ed25519"),
-                OsString::from("-L"),
-                OsString::from("127.0.0.1:3307:mysql.internal:3308"),
             ]
         );
     }
@@ -412,6 +597,16 @@ mod tests {
     }
 
     #[test]
+    fn test_local_port_candidates_wrap_auto_range() {
+        let candidates = local_port_candidates(None, AUTO_LOCAL_PORT_COUNT - 1);
+
+        assert_eq!(candidates.len(), AUTO_LOCAL_PORT_COUNT as usize);
+        assert_eq!(candidates[0], AUTO_LOCAL_PORT_END);
+        assert_eq!(candidates[1], AUTO_LOCAL_PORT_START);
+        assert_eq!(candidates.last(), Some(&(AUTO_LOCAL_PORT_END - 1)));
+    }
+
+    #[test]
     fn test_redact_database_url_hides_passwords() {
         assert_eq!(
             redact_database_url("postgres://user:secret@127.0.0.1:5432/app?sslmode=disable"),
@@ -432,7 +627,7 @@ mod tests {
         let args_path = temp_dir.path().join("ssh-args.txt");
 
         let script = format!(
-            "#!/bin/sh\nprintf '%s\n' \"$@\" > \"{}\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    break\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\npython3 - <<'PY' \"$local_port\"\nimport socket, sys\nport = int(sys.argv[1])\nserver = socket.socket()\nserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\nserver.bind(('127.0.0.1', port))\nserver.listen(1)\nwhile True:\n    conn, _ = server.accept()\n    conn.close()\nPY\n",
+            "#!/bin/sh\nprintf '%s\n' \"$@\" > \"{}\"\nlog_file=\"\"\nlocal_forward=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-E\" ]; then\n    log_file=\"$2\"\n    shift 2\n    continue\n  fi\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    shift 2\n    continue\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\npython3 - <<'PY' \"$local_port\" \"$log_file\"\nimport socket, sys\nport = int(sys.argv[1])\nlog_file = sys.argv[2]\nserver = socket.socket()\nserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\nserver.bind(('127.0.0.1', port))\nserver.listen(1)\nwith open(log_file, 'a', encoding='utf-8') as fh:\n    fh.write(f'debug1: Local forwarding listening on 127.0.0.1 port {{port}}.\\n')\nwhile True:\n    conn, _ = server.accept()\n    conn.close()\nPY\n",
             args_path.display()
         );
 
@@ -488,11 +683,81 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     #[serial]
-    async fn test_establish_tunnel_errors_when_ssh_exits_early() -> Result<()> {
+    async fn test_establish_tunnel_retries_auto_port_after_bind_conflict() -> Result<()> {
+        if which("python3").is_err() {
+            return Ok(());
+        }
+
+        let temp_dir = tempdir()?;
+        let ssh_path = temp_dir.path().join("ssh");
+        let attempt_count_path = temp_dir.path().join("attempt-count.txt");
+        let attempted_ports_path = temp_dir.path().join("attempted-ports.txt");
+
+        let script = format!(
+            "#!/bin/sh\ncount_file=\"{}\"\nattempts_file=\"{}\"\nlog_file=\"\"\nlocal_forward=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-E\" ]; then\n    log_file=\"$2\"\n    shift 2\n    continue\n  fi\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    shift 2\n    continue\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\ncount=1\nif [ -f \"$count_file\" ]; then\n  count=$(($(cat \"$count_file\") + 1))\nfi\nprintf '%s' \"$count\" > \"$count_file\"\nprintf '%s\n' \"$local_port\" >> \"$attempts_file\"\nif [ \"$count\" -eq 1 ]; then\n  printf 'bind [127.0.0.1]:%s: Address already in use\\n' \"$local_port\" >> \"$log_file\"\n  exit 1\nfi\npython3 - <<'PY' \"$local_port\" \"$log_file\"\nimport socket, sys\nport = int(sys.argv[1])\nlog_file = sys.argv[2]\nserver = socket.socket()\nserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\nserver.bind(('127.0.0.1', port))\nserver.listen(1)\nwith open(log_file, 'a', encoding='utf-8') as fh:\n    fh.write(f'debug1: Local forwarding listening on 127.0.0.1 port {{port}}.\\n')\nwhile True:\n    conn, _ = server.accept()\n    conn.close()\nPY\n",
+            attempt_count_path.display(),
+            attempted_ports_path.display()
+        );
+
+        fs::write(&ssh_path, script)?;
+        let mut permissions = fs::metadata(&ssh_path)?.permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&ssh_path, permissions)?;
+
+        let existing_path = env::var_os("PATH").unwrap_or_default();
+        let mut combined_path = OsString::from(temp_dir.path().as_os_str());
+        combined_path.push(OsStr::new(":"));
+        combined_path.push(existing_path);
+        let _path_guard = EnvGuard::set_path("PATH", PathBuf::from(combined_path));
+
+        let mut tunnel = establish_tunnel(
+            "postgres://user:secret@db.internal:5432/app?sslmode=disable".to_string(),
+            SshTunnelConfig {
+                ssh_host: "bastion".to_string(),
+                ssh_user: None,
+                ssh_port: None,
+                ssh_identity_file: None,
+                local_port: None,
+                remote_host: None,
+                remote_port: None,
+            },
+            2,
+        )
+        .await?;
+
+        let attempted_ports: Vec<u16> = fs::read_to_string(&attempted_ports_path)?
+            .lines()
+            .map(str::parse)
+            .collect::<std::result::Result<_, _>>()?;
+        assert_eq!(attempted_ports.len(), 2);
+        assert_eq!(
+            attempted_ports[1],
+            if attempted_ports[0] == AUTO_LOCAL_PORT_END {
+                AUTO_LOCAL_PORT_START
+            } else {
+                attempted_ports[0] + 1
+            }
+        );
+        assert_eq!(
+            local_port_from_database_url(&tunnel.database_url),
+            attempted_ports[1]
+        );
+
+        tunnel.guard.shutdown().await?;
+
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    #[serial]
+    async fn test_establish_tunnel_fails_for_explicit_port_conflict() -> Result<()> {
         let temp_dir = tempdir()?;
         let ssh_path = temp_dir.path().join("ssh");
 
-        fs::write(&ssh_path, "#!/bin/sh\nexit 12\n")?;
+        let script = "#!/bin/sh\nlog_file=\"\"\nlocal_forward=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-E\" ]; then\n    log_file=\"$2\"\n    shift 2\n    continue\n  fi\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    shift 2\n    continue\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\nprintf 'bind [127.0.0.1]:%s: Address already in use\\n' \"$local_port\" >> \"$log_file\"\nexit 1\n";
+
+        fs::write(&ssh_path, script)?;
         let mut permissions = fs::metadata(&ssh_path)?.permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(&ssh_path, permissions)?;
@@ -518,11 +783,110 @@ mod tests {
         )
         .await
         .err()
-        .expect("expected SSH tunnel startup to fail");
+        .expect("expected explicit local port conflict");
 
+        assert_eq!(
+            error.to_string(),
+            "requested SSH tunnel local port 6432 is already in use"
+        );
+
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    #[serial]
+    async fn test_establish_tunnel_does_not_retry_non_bind_failure() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let ssh_path = temp_dir.path().join("ssh");
+        let attempts_path = temp_dir.path().join("attempts.txt");
+
+        let script = format!(
+            "#!/bin/sh\nattempts_file=\"{}\"\nlog_file=\"\"\nlocal_forward=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-E\" ]; then\n    log_file=\"$2\"\n    shift 2\n    continue\n  fi\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    shift 2\n    continue\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\nprintf '%s\n' \"$local_port\" >> \"$attempts_file\"\nprintf 'Permission denied\\n' >> \"$log_file\"\nexit 12\n",
+            attempts_path.display()
+        );
+
+        fs::write(&ssh_path, script)?;
+        let mut permissions = fs::metadata(&ssh_path)?.permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&ssh_path, permissions)?;
+
+        let existing_path = env::var_os("PATH").unwrap_or_default();
+        let mut combined_path = OsString::from(temp_dir.path().as_os_str());
+        combined_path.push(OsStr::new(":"));
+        combined_path.push(existing_path);
+        let _path_guard = EnvGuard::set_path("PATH", PathBuf::from(combined_path));
+
+        let error = establish_tunnel(
+            "postgres://user:secret@db.internal:5432/app?sslmode=disable".to_string(),
+            SshTunnelConfig {
+                ssh_host: "bastion".to_string(),
+                ssh_user: None,
+                ssh_port: None,
+                ssh_identity_file: None,
+                local_port: None,
+                remote_host: None,
+                remote_port: None,
+            },
+            1,
+        )
+        .await
+        .err()
+        .expect("expected non-bind SSH failure");
+
+        let attempts = fs::read_to_string(&attempts_path)?;
+        assert_eq!(attempts.lines().count(), 1);
         assert!(error
             .to_string()
             .contains("SSH tunnel exited before it became ready"));
+
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    #[serial]
+    async fn test_establish_tunnel_waits_for_ssh_log_signal() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let ssh_path = temp_dir.path().join("ssh");
+
+        fs::write(&ssh_path, "#!/bin/sh\nsleep 5\n")?;
+        let mut permissions = fs::metadata(&ssh_path)?.permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&ssh_path, permissions)?;
+
+        let existing_path = env::var_os("PATH").unwrap_or_default();
+        let mut combined_path = OsString::from(temp_dir.path().as_os_str());
+        combined_path.push(OsStr::new(":"));
+        combined_path.push(existing_path);
+        let _path_guard = EnvGuard::set_path("PATH", PathBuf::from(combined_path));
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let listener_port = listener.local_addr()?.port();
+
+        let error = establish_tunnel(
+            "postgres://user:secret@db.internal:5432/app?sslmode=disable".to_string(),
+            SshTunnelConfig {
+                ssh_host: "bastion".to_string(),
+                ssh_user: None,
+                ssh_port: None,
+                ssh_identity_file: None,
+                local_port: Some(listener_port),
+                remote_host: None,
+                remote_port: None,
+            },
+            1,
+        )
+        .await
+        .err()
+        .expect("expected SSH tunnel startup timeout");
+
+        drop(listener);
+
+        assert_eq!(
+            error.to_string(),
+            "SSH tunnel did not become ready within 1 seconds"
+        );
 
         Ok(())
     }
@@ -539,7 +903,7 @@ mod tests {
         }
 
         let script = format!(
-            "#!/bin/sh\necho $$ > \"{}\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    break\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\npython3 - <<'PY' \"$local_port\"\nimport socket, sys\nport = int(sys.argv[1])\nserver = socket.socket()\nserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\nserver.bind(('127.0.0.1', port))\nserver.listen(1)\nwhile True:\n    conn, _ = server.accept()\n    conn.close()\nPY\n",
+            "#!/bin/sh\necho $$ > \"{}\"\nlog_file=\"\"\nlocal_forward=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-E\" ]; then\n    log_file=\"$2\"\n    shift 2\n    continue\n  fi\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    shift 2\n    continue\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\npython3 - <<'PY' \"$local_port\" \"$log_file\"\nimport socket, sys\nport = int(sys.argv[1])\nlog_file = sys.argv[2]\nserver = socket.socket()\nserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\nserver.bind(('127.0.0.1', port))\nserver.listen(1)\nwith open(log_file, 'a', encoding='utf-8') as fh:\n    fh.write(f'debug1: Local forwarding listening on 127.0.0.1 port {{port}}.\\n')\nwhile True:\n    conn, _ = server.accept()\n    conn.close()\nPY\n",
             pid_path.display()
         );
         fs::write(&ssh_path, script)?;

@@ -139,7 +139,7 @@ geni help   # Print help message
     - If omitted, geni leaves identity selection to the system `ssh` client, including `ssh-agent` and `IdentityAgent` from `~/.ssh/config`.
 - `DATABASE_SSH_LOCAL_PORT`
     - Optional local port to bind for the tunnel.
-    - Default: an available `127.0.0.1` port chosen by geni
+    - Default: a local port chosen by geni from `60000..=65000`
 - `DATABASE_SSH_REMOTE_HOST`
     - Optional remote host reachable from the SSH server.
     - Default: the host from `DATABASE_URL`
@@ -239,6 +239,8 @@ DATABASE_URL="postgres://postgres@127.0.0.1:5432/app?sslmode=disable" geni up
 ### Running through an SSH tunnel
 
 SSH tunneling is supported for local CLI usage with Postgres, MySQL, and MariaDB URLs.
+
+If you do not specify `--ssh-local-port`, geni will try high local ports in `60000..=65000` until OpenSSH successfully binds one. Use `--ssh-local-port` or `DATABASE_SSH_LOCAL_PORT` if you want a deterministic local port. If that explicit port is already in use, tunnel startup fails immediately.
 
 ```bash
 geni \
