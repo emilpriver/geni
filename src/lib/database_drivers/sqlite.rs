@@ -72,12 +72,12 @@ impl DatabaseDriver for SqliteDriver {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
             let query = format!(
-                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY);",
+                "CREATE TABLE IF NOT EXISTS \"{}\" (id VARCHAR(255) PRIMARY KEY);",
                 self.migrations_table
             );
             self.db.execute(query.as_str(), params![]).await?;
 
-            let query = format!("SELECT id FROM {} ORDER BY id DESC;", self.migrations_table);
+            let query = format!("SELECT id FROM \"{}\" ORDER BY id DESC;", self.migrations_table);
             let mut result = self.db.query(query.as_str(), params![]).await?;
 
             let mut schema_migrations: Vec<String> = vec![];
@@ -103,7 +103,7 @@ impl DatabaseDriver for SqliteDriver {
             self.db
                 .execute(
                     format!(
-                        "INSERT INTO {} (id) VALUES ('{}');",
+                        "INSERT INTO \"{}\" (id) VALUES ('{}');",
                         self.migrations_table, id,
                     )
                     .as_str(),
@@ -124,7 +124,7 @@ impl DatabaseDriver for SqliteDriver {
         let fut = async move {
             self.db
                 .execute(
-                    format!("DELETE FROM {} WHERE id = '{}';", self.migrations_table, id).as_str(),
+                    format!("DELETE FROM \"{}\" WHERE id = '{}';", self.migrations_table, id).as_str(),
                     params![],
                 )
                 .await?;

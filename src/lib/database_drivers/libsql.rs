@@ -75,7 +75,7 @@ impl DatabaseDriver for LibSQLDriver {
             self.db
                 .execute(
                     format!(
-                        "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) NOT NULL PRIMARY KEY);",
+                        "CREATE TABLE IF NOT EXISTS \"{}\" (id VARCHAR(255) NOT NULL PRIMARY KEY);",
                         self.migrations_table
                     )
                     .as_str(),
@@ -87,7 +87,7 @@ impl DatabaseDriver for LibSQLDriver {
                 .db
                 .query(
                     format!(
-                        " SELECT id FROM {} ORDER BY id DESC;",
+                        " SELECT id FROM \"{}\" ORDER BY id DESC;",
                         self.migrations_table
                     )
                     .as_str(),
@@ -118,7 +118,7 @@ impl DatabaseDriver for LibSQLDriver {
             let migrations_table = self.migrations_table.as_str();
             self.db
                 .execute(
-                    format!("INSERT INTO {} (id) VALUES ('{}')", migrations_table, id).as_str(),
+                    format!("INSERT INTO \"{}\" (id) VALUES ('{}')", migrations_table, id).as_str(),
                     params![],
                 )
                 .await?;
@@ -136,7 +136,7 @@ impl DatabaseDriver for LibSQLDriver {
             let migrations_table = self.migrations_table.as_str();
             self.db
                 .execute(
-                    format!("DELETE FROM {} WHERE id = '{}'", migrations_table, id,).as_str(),
+                    format!("DELETE FROM \"{}\" WHERE id = '{}'", migrations_table, id,).as_str(),
                     params![],
                 )
                 .await?;

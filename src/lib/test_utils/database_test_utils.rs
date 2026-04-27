@@ -78,24 +78,24 @@ pub fn generate_postgres_drop_db_query(db_name: &str) -> String {
 /// Helper function to generate PostgreSQL migrations table query for testing
 pub fn generate_postgres_migrations_table_query(table_name: &str) -> String {
     format!(
-        "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
+        "CREATE TABLE IF NOT EXISTS \"{}\" (id VARCHAR(255) PRIMARY KEY)",
         table_name
     )
 }
 
 /// Helper function to generate PostgreSQL INSERT migration query for testing
 pub fn generate_postgres_insert_migration_query(table_name: &str) -> String {
-    format!("INSERT INTO {} (id) VALUES ($1)", table_name)
+    format!("INSERT INTO \"{}\" (id) VALUES ($1)", table_name)
 }
 
 /// Helper function to generate PostgreSQL DELETE migration query for testing
 pub fn generate_postgres_delete_migration_query(table_name: &str) -> String {
-    format!("DELETE FROM {} WHERE id = $1", table_name)
+    format!("DELETE FROM \"{}\" WHERE id = $1", table_name)
 }
 
 /// Helper function to generate PostgreSQL SELECT migrations query for testing
 pub fn generate_postgres_select_migrations_query(table_name: &str) -> String {
-    format!("SELECT id FROM {} ORDER BY id DESC", table_name)
+    format!("SELECT id FROM \"{}\" ORDER BY id DESC", table_name)
 }
 
 /// Helper function to validate wait timeout for testing
@@ -124,24 +124,24 @@ pub fn generate_mysql_drop_db_query(db_name: &str) -> String {
 /// Helper function to generate MySQL migrations table query for testing
 pub fn generate_mysql_migrations_table_query(table_name: &str) -> String {
     format!(
-        "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
+        "CREATE TABLE IF NOT EXISTS `{}` (id VARCHAR(255) PRIMARY KEY)",
         table_name
     )
 }
 
 /// Helper function to generate MySQL INSERT migration query for testing
 pub fn generate_mysql_insert_migration_query(table_name: &str) -> String {
-    format!("INSERT INTO {} (id) VALUES (?)", table_name)
+    format!("INSERT INTO `{}` (id) VALUES (?)", table_name)
 }
 
 /// Helper function to generate MySQL DELETE migration query for testing
 pub fn generate_mysql_delete_migration_query(table_name: &str) -> String {
-    format!("DELETE FROM {} WHERE id = ?", table_name)
+    format!("DELETE FROM `{}` WHERE id = ?", table_name)
 }
 
 /// Helper function to generate MySQL SELECT migrations query for testing
 pub fn generate_mysql_select_migrations_query(table_name: &str) -> String {
-    format!("SELECT id FROM {} ORDER BY id DESC", table_name)
+    format!("SELECT id FROM `{}` ORDER BY id DESC", table_name)
 }
 
 /// Helper function to normalize MySQL localhost to 127.0.0.1 for testing
@@ -174,24 +174,24 @@ pub fn generate_mariadb_drop_db_query(db_name: &str) -> String {
 /// Helper function to generate MariaDB migrations table query for testing
 pub fn generate_mariadb_migrations_table_query(table_name: &str) -> String {
     format!(
-        "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
+        "CREATE TABLE IF NOT EXISTS `{}` (id VARCHAR(255) PRIMARY KEY)",
         table_name
     )
 }
 
 /// Helper function to generate MariaDB INSERT migration query for testing
 pub fn generate_mariadb_insert_migration_query(table_name: &str) -> String {
-    format!("INSERT INTO {} (id) VALUES (?)", table_name)
+    format!("INSERT INTO `{}` (id) VALUES (?)", table_name)
 }
 
 /// Helper function to generate MariaDB DELETE migration query for testing
 pub fn generate_mariadb_delete_migration_query(table_name: &str) -> String {
-    format!("DELETE FROM {} WHERE id = ?", table_name)
+    format!("DELETE FROM `{}` WHERE id = ?", table_name)
 }
 
 /// Helper function to generate MariaDB SELECT migrations query for testing
 pub fn generate_mariadb_select_migrations_query(table_name: &str) -> String {
-    format!("SELECT id FROM {} ORDER BY id DESC", table_name)
+    format!("SELECT id FROM `{}` ORDER BY id DESC", table_name)
 }
 
 /// Helper function to normalize MariaDB localhost to 127.0.0.1 for testing

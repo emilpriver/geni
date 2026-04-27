@@ -104,12 +104,12 @@ impl DatabaseDriver for MySQLDriver {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
             let query = format!(
-                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
+                "CREATE TABLE IF NOT EXISTS `{}` (id VARCHAR(255) PRIMARY KEY)",
                 self.migrations_table,
             );
             sqlx::query(query.as_str()).execute(&mut self.db).await?;
 
-            let query = format!("SELECT id FROM {} ORDER BY id DESC", self.migrations_table);
+            let query = format!("SELECT id FROM `{}` ORDER BY id DESC", self.migrations_table);
             let result: Vec<String> = sqlx::query(query.as_str())
                 .map(|row: MySqlRow| row.get("id"))
                 .fetch_all(&mut self.db)
@@ -126,7 +126,7 @@ impl DatabaseDriver for MySQLDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = format!("INSERT INTO {} (id) VALUES (?)", self.migrations_table);
+            let query = format!("INSERT INTO `{}` (id) VALUES (?)", self.migrations_table);
             sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
@@ -142,7 +142,7 @@ impl DatabaseDriver for MySQLDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = format!("DELETE FROM {} WHERE id = ?", self.migrations_table);
+            let query = format!("DELETE FROM `{}` WHERE id = ?", self.migrations_table);
             sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
@@ -501,7 +501,7 @@ mod tests {
     #[test]
     fn test_generate_mysql_migrations_table_query() {
         let table_name = "schema_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY)";
+        let expected = "CREATE TABLE IF NOT EXISTS `schema_migrations` (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_mysql_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }
@@ -509,7 +509,7 @@ mod tests {
     #[test]
     fn test_generate_mysql_insert_migration_query() {
         let table_name = "schema_migrations";
-        let expected = "INSERT INTO schema_migrations (id) VALUES (?)";
+        let expected = "INSERT INTO `schema_migrations` (id) VALUES (?)";
         let result = generate_mysql_insert_migration_query(table_name);
         assert_eq!(result, expected);
     }
@@ -517,7 +517,7 @@ mod tests {
     #[test]
     fn test_generate_mysql_delete_migration_query() {
         let table_name = "schema_migrations";
-        let expected = "DELETE FROM schema_migrations WHERE id = ?";
+        let expected = "DELETE FROM `schema_migrations` WHERE id = ?";
         let result = generate_mysql_delete_migration_query(table_name);
         assert_eq!(result, expected);
     }
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn test_generate_mysql_select_migrations_query() {
         let table_name = "schema_migrations";
-        let expected = "SELECT id FROM schema_migrations ORDER BY id DESC";
+        let expected = "SELECT id FROM `schema_migrations` ORDER BY id DESC";
         let result = generate_mysql_select_migrations_query(table_name);
         assert_eq!(result, expected);
     }

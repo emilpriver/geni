@@ -79,7 +79,7 @@ impl DatabaseDriver for TursoDriver {
             self.conn
                 .execute(
                     format!(
-                        "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) NOT NULL PRIMARY KEY);",
+                        "CREATE TABLE IF NOT EXISTS \"{}\" (id VARCHAR(255) NOT NULL PRIMARY KEY);",
                         self.migrations_table
                     )
                     .as_str(),
@@ -90,7 +90,7 @@ impl DatabaseDriver for TursoDriver {
             let mut stmt = self
                 .conn
                 .prepare(
-                    format!("SELECT id FROM {} ORDER BY id DESC;", self.migrations_table).as_str(),
+                    format!("SELECT id FROM \"{}\" ORDER BY id DESC;", self.migrations_table).as_str(),
                 )
                 .await?;
 
@@ -117,7 +117,7 @@ impl DatabaseDriver for TursoDriver {
             let migrations_table = self.migrations_table.as_str();
             self.conn
                 .execute(
-                    format!("INSERT INTO {} (id) VALUES (?)", migrations_table).as_str(),
+                    format!("INSERT INTO \"{}\" (id) VALUES (?)", migrations_table).as_str(),
                     [id],
                 )
                 .await?;
@@ -135,7 +135,7 @@ impl DatabaseDriver for TursoDriver {
             let migrations_table = self.migrations_table.as_str();
             self.conn
                 .execute(
-                    format!("DELETE FROM {} WHERE id = ?", migrations_table).as_str(),
+                    format!("DELETE FROM \"{}\" WHERE id = ?", migrations_table).as_str(),
                     [id],
                 )
                 .await?;

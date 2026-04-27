@@ -100,12 +100,12 @@ impl DatabaseDriver for PostgresDriver {
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
             let query = format!(
-                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
+                "CREATE TABLE IF NOT EXISTS \"{}\" (id VARCHAR(255) PRIMARY KEY)",
                 self.migrations_table,
             );
             sqlx::query(query.as_str()).execute(&mut self.db).await?;
 
-            let query = format!("SELECT id FROM {} ORDER BY id DESC", self.migrations_table);
+            let query = format!("SELECT id FROM \"{}\" ORDER BY id DESC", self.migrations_table);
 
             let result: Vec<String> = sqlx::query(query.as_str())
                 .map(|row: PgRow| row.get("id"))
@@ -123,7 +123,7 @@ impl DatabaseDriver for PostgresDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = format!("INSERT INTO {} (id) VALUES ($1)", self.migrations_table);
+            let query = format!("INSERT INTO \"{}\" (id) VALUES ($1)", self.migrations_table);
             sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
@@ -139,7 +139,7 @@ impl DatabaseDriver for PostgresDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = format!("DELETE FROM {} WHERE id = $1", self.migrations_table);
+            let query = format!("DELETE FROM \"{}\" WHERE id = $1", self.migrations_table);
             sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
@@ -499,7 +499,7 @@ mod tests {
     #[test]
     fn test_generate_postgres_migrations_table_query() {
         let table_name = "schema_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS schema_migrations (id VARCHAR(255) PRIMARY KEY)";
+        let expected = "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_postgres_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }
@@ -507,7 +507,7 @@ mod tests {
     #[test]
     fn test_generate_postgres_migrations_table_query_custom() {
         let table_name = "custom_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS custom_migrations (id VARCHAR(255) PRIMARY KEY)";
+        let expected = "CREATE TABLE IF NOT EXISTS \"custom_migrations\" (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_postgres_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }
@@ -515,7 +515,7 @@ mod tests {
     #[test]
     fn test_generate_postgres_insert_migration_query() {
         let table_name = "schema_migrations";
-        let expected = "INSERT INTO schema_migrations (id) VALUES ($1)";
+        let expected = "INSERT INTO \"schema_migrations\" (id) VALUES ($1)";
         let result = generate_postgres_insert_migration_query(table_name);
         assert_eq!(result, expected);
     }
@@ -523,7 +523,7 @@ mod tests {
     #[test]
     fn test_generate_postgres_delete_migration_query() {
         let table_name = "schema_migrations";
-        let expected = "DELETE FROM schema_migrations WHERE id = $1";
+        let expected = "DELETE FROM \"schema_migrations\" WHERE id = $1";
         let result = generate_postgres_delete_migration_query(table_name);
         assert_eq!(result, expected);
     }
@@ -531,7 +531,7 @@ mod tests {
     #[test]
     fn test_generate_postgres_select_migrations_query() {
         let table_name = "schema_migrations";
-        let expected = "SELECT id FROM schema_migrations ORDER BY id DESC";
+        let expected = "SELECT id FROM \"schema_migrations\" ORDER BY id DESC";
         let result = generate_postgres_select_migrations_query(table_name);
         assert_eq!(result, expected);
     }
