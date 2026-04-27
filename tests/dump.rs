@@ -7,6 +7,7 @@ use tempfile::TempDir;
 use geni::database_drivers;
 use geni::dump::dump;
 
+use testcontainers::core::wait::LogWaitStrategy;
 use testcontainers::core::{IntoContainerPort, WaitFor};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::{GenericImage, ImageExt};
@@ -23,7 +24,9 @@ async fn setup_test_schema(database_url: &str) -> Result<()> {
     )
     .await?;
 
-    create_client.create_database().await?;
+    if !database_url.starts_with("http://") && !database_url.starts_with("https://") {
+        create_client.create_database().await?;
+    }
 
     drop(create_client);
 
@@ -78,7 +81,7 @@ async fn run_dump_test(database_url: &str, schema_file: &str, migrations_folder:
 
 #[tokio::test]
 async fn test_dump_postgres() -> Result<()> {
-    let container = GenericImage::new("postgres", "14.10")
+    let container = GenericImage::new("postgres", "18.0")
         .with_exposed_port(5432.tcp())
         .with_wait_for(WaitFor::message_on_stdout(
             "database system is ready to accept connections",
@@ -108,8 +111,8 @@ async fn test_dump_postgres() -> Result<()> {
 async fn test_dump_mysql() -> Result<()> {
     let container = GenericImage::new("mysql", "latest")
         .with_exposed_port(3306.tcp())
-        .with_wait_for(WaitFor::message_on_stdout(
-            "/usr/sbin/mysqld: ready for connections",
+        .with_wait_for(WaitFor::Log(
+            LogWaitStrategy::stdout_or_stderr("ready for connections").with_times(2),
         ))
         .with_env_var("MYSQL_ROOT_PASSWORD", "password")
         .with_env_var("MYSQL_DATABASE", "development")
@@ -132,7 +135,9 @@ async fn test_dump_mysql() -> Result<()> {
 async fn test_dump_mariadb() -> Result<()> {
     let container = GenericImage::new("mariadb", "11.1.3")
         .with_exposed_port(3306.tcp())
-        .with_wait_for(WaitFor::message_on_stdout("port: 3306"))
+        .with_wait_for(WaitFor::Log(
+            LogWaitStrategy::stdout_or_stderr("ready for connections").with_times(2),
+        ))
         .with_env_var("MARIADB_ROOT_PASSWORD", "password")
         .with_env_var("MARIADB_DATABASE", "development")
         .start()
@@ -154,7 +159,9 @@ async fn test_dump_mariadb() -> Result<()> {
 async fn test_dump_libsql() -> Result<()> {
     let container = GenericImage::new("ghcr.io/tursodatabase/libsql-server", "latest")
         .with_exposed_port(8080.tcp())
-        .with_wait_for(WaitFor::message_on_stdout("listening on"))
+        .with_wait_for(WaitFor::message_on_either_std(
+            "listening for incoming user HTTP connection",
+        ))
         .start()
         .await
         .expect("Failed to start libsql");

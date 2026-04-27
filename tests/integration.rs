@@ -12,6 +12,7 @@ use geni::config::Database;
 use geni::database_drivers;
 use geni::migrate::{down, up};
 
+use testcontainers::core::wait::LogWaitStrategy;
 use testcontainers::core::{IntoContainerPort, WaitFor};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::{GenericImage, ImageExt};
@@ -179,7 +180,7 @@ async fn test_migrate(database: Database, db_url: &str) -> Result<()> {
 
 #[tokio::test]
 async fn test_migrate_postgres() -> Result<()> {
-    let container = GenericImage::new("postgres", "14.10")
+    let container = GenericImage::new("postgres", "18.0")
         .with_exposed_port(5432.tcp())
         .with_wait_for(WaitFor::message_on_stdout(
             "database system is ready to accept connections",
@@ -207,8 +208,8 @@ async fn test_migrate_postgres() -> Result<()> {
 async fn test_migrate_mysql() -> Result<()> {
     let container = GenericImage::new("mysql", "latest")
         .with_exposed_port(3306.tcp())
-        .with_wait_for(WaitFor::message_on_stdout(
-            "/usr/sbin/mysqld: ready for connections",
+        .with_wait_for(WaitFor::Log(
+            LogWaitStrategy::stdout_or_stderr("ready for connections").with_times(2),
         ))
         .with_env_var("MYSQL_ROOT_PASSWORD", "password")
         .with_env_var("MYSQL_DATABASE", "development")
@@ -229,7 +230,9 @@ async fn test_migrate_mysql() -> Result<()> {
 async fn test_migrate_maria() -> Result<()> {
     let container = GenericImage::new("mariadb", "11.1.3")
         .with_exposed_port(3306.tcp())
-        .with_wait_for(WaitFor::message_on_stdout("port: 3306"))
+        .with_wait_for(WaitFor::Log(
+            LogWaitStrategy::stdout_or_stderr("ready for connections").with_times(2),
+        ))
         .with_env_var("MARIADB_ROOT_PASSWORD", "password")
         .with_env_var("MARIADB_DATABASE", "development")
         .start()
@@ -249,7 +252,9 @@ async fn test_migrate_maria() -> Result<()> {
 async fn test_migrate_libsql() -> Result<()> {
     let container = GenericImage::new("ghcr.io/tursodatabase/libsql-server", "latest")
         .with_exposed_port(8080.tcp())
-        .with_wait_for(WaitFor::message_on_stdout("listening on"))
+        .with_wait_for(WaitFor::message_on_either_std(
+            "listening for incoming user HTTP connection",
+        ))
         .start()
         .await
         .expect("Failed to start libsql");
