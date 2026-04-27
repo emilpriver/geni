@@ -103,13 +103,15 @@ impl DatabaseDriver for MySQLDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
+            let table = utils::quote_identifier(&self.migrations_table, "`");
+
             let query = format!(
-                "CREATE TABLE IF NOT EXISTS `{}` (id VARCHAR(255) PRIMARY KEY)",
-                self.migrations_table,
+                "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY)",
+                table,
             );
             sqlx::query(query.as_str()).execute(&mut self.db).await?;
 
-            let query = format!("SELECT id FROM `{}` ORDER BY id DESC", self.migrations_table);
+            let query = format!("SELECT id FROM {} ORDER BY id DESC", table);
             let result: Vec<String> = sqlx::query(query.as_str())
                 .map(|row: MySqlRow| row.get("id"))
                 .fetch_all(&mut self.db)
@@ -126,7 +128,8 @@ impl DatabaseDriver for MySQLDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = format!("INSERT INTO `{}` (id) VALUES (?)", self.migrations_table);
+            let table = utils::quote_identifier(&self.migrations_table, "`");
+            let query = format!("INSERT INTO {} (id) VALUES (?)", table);
             sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
@@ -142,7 +145,8 @@ impl DatabaseDriver for MySQLDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let query = format!("DELETE FROM `{}` WHERE id = ?", self.migrations_table);
+            let table = utils::quote_identifier(&self.migrations_table, "`");
+            let query = format!("DELETE FROM {} WHERE id = ?", table);
             sqlx::query(query.as_str())
                 .bind(id)
                 .execute(&mut self.db)
@@ -701,5 +705,37 @@ mod tests {
             let result = normalize_mysql_localhost_url(input).unwrap();
             assert_eq!(result, expected, "Failed for input: {}", input);
         }
+    }
+
+    #[test]
+    fn test_generate_mysql_migrations_table_query_schema_qualified() {
+        let table_name = "migrations.migrations";
+        let expected = "CREATE TABLE IF NOT EXISTS `migrations`.`migrations` (id VARCHAR(255) PRIMARY KEY)";
+        let result = generate_mysql_migrations_table_query(table_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_mysql_insert_migration_query_schema_qualified() {
+        let table_name = "migrations.migrations";
+        let expected = "INSERT INTO `migrations`.`migrations` (id) VALUES (?)";
+        let result = generate_mysql_insert_migration_query(table_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_mysql_delete_migration_query_schema_qualified() {
+        let table_name = "migrations.migrations";
+        let expected = "DELETE FROM `migrations`.`migrations` WHERE id = ?";
+        let result = generate_mysql_delete_migration_query(table_name);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_generate_mysql_select_migrations_query_schema_qualified() {
+        let table_name = "migrations.migrations";
+        let expected = "SELECT id FROM `migrations`.`migrations` ORDER BY id DESC";
+        let result = generate_mysql_select_migrations_query(table_name);
+        assert_eq!(result, expected);
     }
 }

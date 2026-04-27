@@ -76,11 +76,13 @@ impl DatabaseDriver for TursoDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
+
             self.conn
                 .execute(
                     format!(
-                        "CREATE TABLE IF NOT EXISTS \"{}\" (id VARCHAR(255) NOT NULL PRIMARY KEY);",
-                        self.migrations_table
+                        "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) NOT NULL PRIMARY KEY);",
+                        table
                     )
                     .as_str(),
                     (),
@@ -90,7 +92,7 @@ impl DatabaseDriver for TursoDriver {
             let mut stmt = self
                 .conn
                 .prepare(
-                    format!("SELECT id FROM \"{}\" ORDER BY id DESC;", self.migrations_table).as_str(),
+                    format!("SELECT id FROM {} ORDER BY id DESC;", table).as_str(),
                 )
                 .await?;
 
@@ -114,10 +116,10 @@ impl DatabaseDriver for TursoDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let migrations_table = self.migrations_table.as_str();
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.conn
                 .execute(
-                    format!("INSERT INTO \"{}\" (id) VALUES (?)", migrations_table).as_str(),
+                    format!("INSERT INTO {} (id) VALUES (?)", table).as_str(),
                     [id],
                 )
                 .await?;
@@ -132,10 +134,10 @@ impl DatabaseDriver for TursoDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let migrations_table = self.migrations_table.as_str();
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.conn
                 .execute(
-                    format!("DELETE FROM \"{}\" WHERE id = ?", migrations_table).as_str(),
+                    format!("DELETE FROM {} WHERE id = ?", table).as_str(),
                     [id],
                 )
                 .await?;
@@ -349,5 +351,13 @@ mod tests {
             let result = validate_turso_url(path);
             assert!(result.is_ok(), "Special path should be accepted: {}", path);
         }
+    }
+
+    #[test]
+    fn test_turso_quote_identifier_schema_qualified() {
+        assert_eq!(
+            utils::quote_identifier("migrations.migrations", "\""),
+            "\"migrations\".\"migrations\""
+        );
     }
 }

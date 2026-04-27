@@ -69,7 +69,7 @@ fn generate_test_migrations(migration_path: &str) -> Result<()> {
     Ok(())
 }
 
-async fn test_migrate(database: Database, db_url: &str) -> Result<()> {
+async fn test_migrate(database: Database, db_url: &str, migrations_table: &str) -> Result<()> {
     let url = db_url.to_string();
     let tmp_dir = TempDir::new()?;
     let migration_folder_string = tmp_dir.path().to_str().unwrap().to_string();
@@ -82,7 +82,7 @@ async fn test_migrate(database: Database, db_url: &str) -> Result<()> {
     let mut create_client = database_drivers::new(
         url.clone(),
         None,
-        "schema_migrations".to_string(),
+        migrations_table.to_string(),
         migration_folder_string.clone(),
         database_schema_file.clone(),
         Some(database_wait_timeout),
@@ -101,7 +101,7 @@ async fn test_migrate(database: Database, db_url: &str) -> Result<()> {
     let mut client = database_drivers::new(
         url.clone(),
         None,
-        "schema_migrations".to_string(),
+        migrations_table.to_string(),
         migration_folder_string.clone(),
         database_schema_file.clone(),
         Some(database_wait_timeout),
@@ -113,7 +113,7 @@ async fn test_migrate(database: Database, db_url: &str) -> Result<()> {
     let u = up(
         url.clone(),
         None,
-        "schema_migrations".to_string(),
+        migrations_table.to_string(),
         migration_folder_string.clone(),
         database_schema_file.clone(),
         Some(database_wait_timeout),
@@ -133,7 +133,7 @@ async fn test_migrate(database: Database, db_url: &str) -> Result<()> {
     let d = down(
         url.clone(),
         None,
-        "schema_migrations".to_string(),
+        migrations_table.to_string(),
         migration_folder_string.clone(),
         database_schema_file.clone(),
         Some(database_wait_timeout),
@@ -154,7 +154,7 @@ async fn test_migrate(database: Database, db_url: &str) -> Result<()> {
     let d = down(
         url,
         None,
-        "schema_migrations".to_string(),
+        migrations_table.to_string(),
         migration_folder_string.clone(),
         database_schema_file.clone(),
         Some(database_wait_timeout),
@@ -198,7 +198,33 @@ async fn test_migrate_postgres() -> Result<()> {
     );
 
     env::set_var("DATABASE_SCHEMA_FILE", "postgres_schema.sql");
-    test_migrate(Database::Postgres, &url).await?;
+    test_migrate(Database::Postgres, &url, "schema_migrations").await?;
+
+    drop(container);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_migrate_postgres_schema_qualified() -> Result<()> {
+    let container = GenericImage::new("postgres", "18.0")
+        .with_exposed_port(5432.tcp())
+        .with_wait_for(WaitFor::message_on_stdout(
+            "database system is ready to accept connections",
+        ))
+        .with_env_var("POSTGRES_DB", "development")
+        .with_env_var("POSTGRES_USER", "postgres")
+        .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
+        .start()
+        .await
+        .expect("Failed to start postgres");
+    let host_port = container.get_host_port_ipv4(5432).await?;
+    let url = format!(
+        "postgres://postgres:mysecretpassword@localhost:{}/app?sslmode=disable",
+        host_port
+    );
+
+    env::set_var("DATABASE_SCHEMA_FILE", "postgres_schema.sql");
+    test_migrate(Database::Postgres, &url, "migrations.migrations").await?;
 
     drop(container);
     Ok(())
@@ -220,7 +246,7 @@ async fn test_migrate_mysql() -> Result<()> {
     let url = format!("mysql://root:password@localhost:{}/app", host_port);
 
     env::set_var("DATABASE_SCHEMA_FILE", "mysql_schema.sql");
-    test_migrate(Database::MySQL, &url).await?;
+    test_migrate(Database::MySQL, &url, "schema_migrations").await?;
 
     drop(container);
     Ok(())
@@ -242,7 +268,7 @@ async fn test_migrate_maria() -> Result<()> {
     let url = format!("mariadb://root:password@localhost:{}/app", host_port);
 
     env::set_var("DATABASE_SCHEMA_FILE", "maria_schema.sql");
-    test_migrate(Database::MariaDB, &url).await?;
+    test_migrate(Database::MariaDB, &url, "schema_migrations").await?;
 
     drop(container);
     Ok(())
@@ -262,7 +288,7 @@ async fn test_migrate_libsql() -> Result<()> {
     let url = format!("http://localhost:{}", host_port);
 
     env::set_var("DATABASE_SCHEMA_FILE", "libsql_schema.sql");
-    test_migrate(Database::LibSQL, &url).await?;
+    test_migrate(Database::LibSQL, &url, "schema_migrations").await?;
 
     drop(container);
     Ok(())
@@ -277,7 +303,7 @@ async fn test_migrate_sqlite() {
     let path = std::path::Path::new(&filename);
     File::create(path).unwrap();
     let url = format!("sqlite://{}", path.to_str().unwrap());
-    test_migrate(Database::SQLite, &url).await.unwrap();
+    test_migrate(Database::SQLite, &url, "schema_migrations").await.unwrap();
 }
 
 #[tokio::test]
