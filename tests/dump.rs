@@ -141,6 +141,9 @@ fn run_postgres_test(name: &str) {
         teardown_suite: None,
     };
     run(&mut suite, POSTGRES_CASES, RunConfig::filter(name), &hook_fns);
+    if let Some(container) = suite._container.take() {
+        rt.block_on(async { drop(container); });
+    }
 }
 
 #[test]
@@ -207,6 +210,9 @@ fn run_mysql_test(name: &str) {
         teardown_suite: None,
     };
     run(&mut suite, MYSQL_CASES, RunConfig::filter(name), &hook_fns);
+    if let Some(container) = suite._container.take() {
+        rt.block_on(async { drop(container); });
+    }
 }
 
 #[test]
@@ -271,6 +277,9 @@ fn run_mariadb_test(name: &str) {
         teardown_suite: None,
     };
     run(&mut suite, MARIADB_CASES, RunConfig::filter(name), &hook_fns);
+    if let Some(container) = suite._container.take() {
+        rt.block_on(async { drop(container); });
+    }
 }
 
 #[test]
@@ -333,6 +342,9 @@ fn run_libsql_test(name: &str) {
         teardown_suite: None,
     };
     run(&mut suite, LIBSQL_CASES, RunConfig::filter(name), &hook_fns);
+    if let Some(container) = suite._container.take() {
+        rt.block_on(async { drop(container); });
+    }
 }
 
 #[test]

@@ -626,6 +626,10 @@ mod tests {
         let ssh_path = temp_dir.path().join("ssh");
         let args_path = temp_dir.path().join("ssh-args.txt");
 
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let test_port = listener.local_addr()?.port();
+        drop(listener);
+
         let script = format!(
             "#!/bin/sh\nprintf '%s\n' \"$@\" > \"{}\"\nlog_file=\"\"\nlocal_forward=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-E\" ]; then\n    log_file=\"$2\"\n    shift 2\n    continue\n  fi\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    shift 2\n    continue\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\npython3 - <<'PY' \"$local_port\" \"$log_file\"\nimport socket, sys\nport = int(sys.argv[1])\nlog_file = sys.argv[2]\nserver = socket.socket()\nserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\nserver.bind(('127.0.0.1', port))\nserver.listen(1)\nwith open(log_file, 'a', encoding='utf-8') as fh:\n    fh.write(f'debug1: Local forwarding listening on 127.0.0.1 port {{port}}.\\n')\nwhile True:\n    conn, _ = server.accept()\n    conn.close()\nPY\n",
             args_path.display()
@@ -649,7 +653,7 @@ mod tests {
                 ssh_user: Some("deploy".to_string()),
                 ssh_port: Some(2202),
                 ssh_identity_file: Some(PathBuf::from("/tmp/id_ed25519")),
-                local_port: Some(55321),
+                local_port: Some(test_port),
                 remote_host: Some("postgres.internal".to_string()),
                 remote_port: Some(5433),
             },
@@ -659,7 +663,7 @@ mod tests {
 
         assert_eq!(
             tunnel.database_url,
-            "postgres://user:secret@127.0.0.1:55321/app?sslmode=disable"
+            format!("postgres://user:secret@127.0.0.1:{}/app?sslmode=disable", test_port)
         );
 
         let args = fs::read_to_string(&args_path)?;
@@ -672,7 +676,7 @@ mod tests {
         assert!(args.contains("2202"));
         assert!(args.contains("-i"));
         assert!(args.contains("/tmp/id_ed25519"));
-        assert!(args.contains("127.0.0.1:55321:postgres.internal:5433"));
+        assert!(args.contains(&format!("127.0.0.1:{}:postgres.internal:5433", test_port)));
         assert!(args.contains("bastion"));
 
         tunnel.guard.shutdown().await?;
@@ -755,6 +759,10 @@ mod tests {
         let temp_dir = tempdir()?;
         let ssh_path = temp_dir.path().join("ssh");
 
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let test_port = listener.local_addr()?.port();
+        drop(listener);
+
         let script = "#!/bin/sh\nlog_file=\"\"\nlocal_forward=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-E\" ]; then\n    log_file=\"$2\"\n    shift 2\n    continue\n  fi\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    shift 2\n    continue\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\nprintf 'bind [127.0.0.1]:%s: Address already in use\\n' \"$local_port\" >> \"$log_file\"\nexit 1\n";
 
         fs::write(&ssh_path, script)?;
@@ -775,7 +783,7 @@ mod tests {
                 ssh_user: None,
                 ssh_port: None,
                 ssh_identity_file: None,
-                local_port: Some(64322),
+                local_port: Some(test_port),
                 remote_host: None,
                 remote_port: None,
             },
@@ -787,7 +795,7 @@ mod tests {
 
         assert_eq!(
             error.to_string(),
-            "requested SSH tunnel local port 64322 is already in use"
+            format!("requested SSH tunnel local port {} is already in use", test_port)
         );
 
         Ok(())
@@ -902,6 +910,10 @@ mod tests {
             return Ok(());
         }
 
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let test_port = listener.local_addr()?.port();
+        drop(listener);
+
         let script = format!(
             "#!/bin/sh\necho $$ > \"{}\"\nlog_file=\"\"\nlocal_forward=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"-E\" ]; then\n    log_file=\"$2\"\n    shift 2\n    continue\n  fi\n  if [ \"$1\" = \"-L\" ]; then\n    local_forward=\"$2\"\n    shift 2\n    continue\n  fi\n  shift\n done\nlocal_port=$(printf '%s' \"$local_forward\" | cut -d: -f2)\npython3 - <<'PY' \"$local_port\" \"$log_file\"\nimport socket, sys\nport = int(sys.argv[1])\nlog_file = sys.argv[2]\nserver = socket.socket()\nserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\nserver.bind(('127.0.0.1', port))\nserver.listen(1)\nwith open(log_file, 'a', encoding='utf-8') as fh:\n    fh.write(f'debug1: Local forwarding listening on 127.0.0.1 port {{port}}.\\n')\nwhile True:\n    conn, _ = server.accept()\n    conn.close()\nPY\n",
             pid_path.display()
@@ -924,7 +936,7 @@ mod tests {
                 ssh_user: None,
                 ssh_port: None,
                 ssh_identity_file: None,
-                local_port: Some(64323),
+                local_port: Some(test_port),
                 remote_host: Some("127.0.0.1".to_string()),
                 remote_port: Some(5432),
             },
