@@ -19,12 +19,6 @@ jobs:
     - name: Run verify-version.sh
       if: startsWith(github.ref, 'refs/tags/')
       run: chmod +x scripts/verify-version.sh && scripts/verify-version.sh
-    - name: Setup
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y mariadb-client
-    - name: Databases
-      run: docker compose up -d
     - name: Run tests
       run: cargo test --verbose
   build-binary:
@@ -151,11 +145,36 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
-    - name: Databases
-      run: docker compose up -d
-    - name: create test migrations
+    - name: Start MariaDB
+      run: |
+        docker run -d \
+          --name mariadb-test \
+          -e MARIADB_ROOT_PASSWORD=password \
+          -e MARIADB_DATABASE=development \
+          -p 3307:3306 \
+          mariadb:11.1.3
+    - name: Wait for database
+      run: |
+        for i in {1..30}; do
+          if docker exec mariadb-test mysqladmin ping -h localhost -u root -ppassword --silent; then
+            echo "Database is ready"
+            break
+          fi
+          echo "Waiting for database..."
+          sleep 2
+        done
+    - name: Create test migrations
       run: bash scripts/test-migrations.sh
-    - name: Test migrations
-      uses: emilpriver/geni@main
-      with:
-        database_url: "mariadb://root:password@localhost:3307/development"
+    - name: Run geni migrations
+      run: |
+        chmod +x geni-linux-amd64
+        ./geni-linux-amd64 up
+      env:
+        DATABASE_URL: "mariadb://root:password@localhost:3307/development"
+        DATABASE_MIGRATIONS_FOLDER: "./migrations"
+    - name: Verify migrations applied
+      run: |
+        ./geni-linux-amd64 status
+      env:
+        DATABASE_URL: "mariadb://root:password@localhost:3307/development"
+        DATABASE_MIGRATIONS_FOLDER: "./migrations"

@@ -1,10 +1,9 @@
-mod config;
-mod database_drivers;
-mod dump;
-mod generate;
-mod integration_test;
+pub mod config;
+pub mod database_drivers;
+pub mod dump;
+pub mod generate;
 mod management;
-mod migrate;
+pub mod migrate;
 mod status;
 mod utils;
 

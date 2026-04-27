@@ -649,7 +649,7 @@ mod tests {
                 ssh_user: Some("deploy".to_string()),
                 ssh_port: Some(2202),
                 ssh_identity_file: Some(PathBuf::from("/tmp/id_ed25519")),
-                local_port: Some(6432),
+                local_port: Some(55321),
                 remote_host: Some("postgres.internal".to_string()),
                 remote_port: Some(5433),
             },
@@ -659,7 +659,7 @@ mod tests {
 
         assert_eq!(
             tunnel.database_url,
-            "postgres://user:secret@127.0.0.1:6432/app?sslmode=disable"
+            "postgres://user:secret@127.0.0.1:55321/app?sslmode=disable"
         );
 
         let args = fs::read_to_string(&args_path)?;
@@ -672,7 +672,7 @@ mod tests {
         assert!(args.contains("2202"));
         assert!(args.contains("-i"));
         assert!(args.contains("/tmp/id_ed25519"));
-        assert!(args.contains("127.0.0.1:6432:postgres.internal:5433"));
+        assert!(args.contains("127.0.0.1:55321:postgres.internal:5433"));
         assert!(args.contains("bastion"));
 
         tunnel.guard.shutdown().await?;
@@ -775,7 +775,7 @@ mod tests {
                 ssh_user: None,
                 ssh_port: None,
                 ssh_identity_file: None,
-                local_port: Some(6432),
+                local_port: Some(64322),
                 remote_host: None,
                 remote_port: None,
             },
@@ -787,7 +787,7 @@ mod tests {
 
         assert_eq!(
             error.to_string(),
-            "requested SSH tunnel local port 6432 is already in use"
+            "requested SSH tunnel local port 64322 is already in use"
         );
 
         Ok(())
@@ -924,7 +924,7 @@ mod tests {
                 ssh_user: None,
                 ssh_port: None,
                 ssh_identity_file: None,
-                local_port: Some(6433),
+                local_port: Some(64323),
                 remote_host: Some("127.0.0.1".to_string()),
                 remote_port: Some(5432),
             },
