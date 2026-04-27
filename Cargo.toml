@@ -46,7 +46,6 @@ turso = "0.5.3"
 mockall = "0.14.0"
 tempfile = "3.24.0"
 testcontainers = "0.27.2"
-suitecase = "0.0.5"
 serial_test = "3.2.0"
 
 [profile.release]

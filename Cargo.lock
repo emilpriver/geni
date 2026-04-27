@@ -1343,7 +1343,6 @@ dependencies = [
  "serial_test",
  "simplelog",
  "sqlx",
- "suitecase",
  "tempfile",
  "testcontainers",
  "tokio",
@@ -3953,12 +3952,6 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
-
-[[package]]
-name = "suitecase"
-version = "0.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "893061888391aa94ab28212cb040b41298bd6c57088fa2c55b81d8dd1316f405"
 
 [[package]]
 name = "symlink"
