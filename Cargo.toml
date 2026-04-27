@@ -1,6 +1,6 @@
 [package]
 name = "geni"
-version = "1.2.0"
+version = "1.2.1"
 edition = "2021"
 resolver = "2"
 description = "A standalone database CLI migration tool"
@@ -33,20 +33,20 @@ futures = "0.3.31"
 serde = { version = "1.0.228", features = ["derive"] }
 log = { version = "0.4.29", features = ["max_level_debug", "serde"] }
 serde_json = "1.0.149"
-serial_test = "3.3.1"
 simplelog = "0.12.2"
 tokio = { version = "1.49.0", features = ["full"] }
 sqlx = { version = "0.8.6",  features = ["runtime-tokio", "chrono", "postgres", "mysql", "time"] }
 url = { version = "2.5.8", features = ["serde"] }
 which = "8.0.0"
 regex = "1.12.3"
-libsql = "0.6.0"
-turso = "0.2.2"
+libsql = "0.9.30"
+turso = "0.5.3"
 
 [dev-dependencies]
 mockall = "0.14.0"
 tempfile = "3.24.0"
-tempdir = "0.3.7"
+testcontainers = "0.27.2"
+serial_test = "3.2.0"
 
 [profile.release]
 opt-level = 'z'     # Optimize for size

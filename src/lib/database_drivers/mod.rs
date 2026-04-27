@@ -11,7 +11,7 @@ pub mod mysql;
 pub mod postgres;
 pub mod sqlite;
 pub mod turso;
-mod utils;
+pub mod utils;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SchemaMigration {

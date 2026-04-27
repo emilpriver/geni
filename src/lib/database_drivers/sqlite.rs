@@ -71,13 +71,15 @@ impl DatabaseDriver for SqliteDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
+
             let query = format!(
                 "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) PRIMARY KEY);",
-                self.migrations_table
+                table
             );
             self.db.execute(query.as_str(), params![]).await?;
 
-            let query = format!("SELECT id FROM {} ORDER BY id DESC;", self.migrations_table);
+            let query = format!("SELECT id FROM {} ORDER BY id DESC;", table);
             let mut result = self.db.query(query.as_str(), params![]).await?;
 
             let mut schema_migrations: Vec<String> = vec![];
@@ -100,11 +102,12 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.db
                 .execute(
                     format!(
                         "INSERT INTO {} (id) VALUES ('{}');",
-                        self.migrations_table, id,
+                        table, id,
                     )
                     .as_str(),
                     params![],
@@ -122,9 +125,10 @@ impl DatabaseDriver for SqliteDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.db
                 .execute(
-                    format!("DELETE FROM {} WHERE id = '{}';", self.migrations_table, id).as_str(),
+                    format!("DELETE FROM {} WHERE id = '{}';", table, id).as_str(),
                     params![],
                 )
                 .await?;
@@ -377,5 +381,13 @@ mod tests {
                 url
             );
         }
+    }
+
+    #[test]
+    fn test_sqlite_quote_identifier_schema_qualified() {
+        assert_eq!(
+            utils::quote_identifier("migrations.migrations", "\""),
+            "\"migrations\".\"migrations\""
+        );
     }
 }

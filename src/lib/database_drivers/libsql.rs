@@ -72,11 +72,13 @@ impl DatabaseDriver for LibSQLDriver {
         &mut self,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<String>, anyhow::Error>> + '_>> {
         let fut = async move {
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
+
             self.db
                 .execute(
                     format!(
                         "CREATE TABLE IF NOT EXISTS {} (id VARCHAR(255) NOT NULL PRIMARY KEY);",
-                        self.migrations_table
+                        table
                     )
                     .as_str(),
                     params![],
@@ -88,7 +90,7 @@ impl DatabaseDriver for LibSQLDriver {
                 .query(
                     format!(
                         " SELECT id FROM {} ORDER BY id DESC;",
-                        self.migrations_table
+                        table
                     )
                     .as_str(),
                     params![],
@@ -115,10 +117,10 @@ impl DatabaseDriver for LibSQLDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let migrations_table = self.migrations_table.as_str();
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.db
                 .execute(
-                    format!("INSERT INTO {} (id) VALUES ('{}')", migrations_table, id).as_str(),
+                    format!("INSERT INTO {} (id) VALUES ('{}')", table, id).as_str(),
                     params![],
                 )
                 .await?;
@@ -133,10 +135,10 @@ impl DatabaseDriver for LibSQLDriver {
         id: &'a str,
     ) -> Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + '_>> {
         let fut = async move {
-            let migrations_table = self.migrations_table.as_str();
+            let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.db
                 .execute(
-                    format!("DELETE FROM {} WHERE id = '{}'", migrations_table, id,).as_str(),
+                    format!("DELETE FROM {} WHERE id = '{}'", table, id,).as_str(),
                     params![],
                 )
                 .await?;
@@ -427,5 +429,13 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_libsql_quote_identifier_schema_qualified() {
+        assert_eq!(
+            utils::quote_identifier("migrations.migrations", "\""),
+            "\"migrations\".\"migrations\""
+        );
     }
 }

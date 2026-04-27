@@ -3,6 +3,17 @@ use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 
+pub fn quote_identifier(name: &str, quote: &str) -> String {
+    if name.contains('.') {
+        name.split('.')
+            .map(|part| format!("{}{}{}", quote, part, quote))
+            .collect::<Vec<_>>()
+            .join(".")
+    } else {
+        format!("{}{}{}", quote, name, quote)
+    }
+}
+
 pub async fn write_to_schema_file(
     content: String,
     migrations_folder: String,
@@ -218,5 +229,36 @@ mod tests {
 
         let expected_path2 = format!("{}/{}", migrations_folder, schema_file_with_subdir);
         assert!(Path::new(&expected_path2).exists());
+    }
+
+    #[test]
+    fn test_quote_identifier_simple() {
+        assert_eq!(quote_identifier("users", "\""), "\"users\"");
+        assert_eq!(quote_identifier("schema_migrations", "`"), "`schema_migrations`");
+    }
+
+    #[test]
+    fn test_quote_identifier_schema_qualified() {
+        assert_eq!(
+            quote_identifier("migrations.migrations", "\""),
+            "\"migrations\".\"migrations\""
+        );
+        assert_eq!(
+            quote_identifier("my_schema.my_table", "`"),
+            "`my_schema`.`my_table`"
+        );
+    }
+
+    #[test]
+    fn test_quote_identifier_multiple_dots() {
+        assert_eq!(
+            quote_identifier("a.b.c", "\""),
+            "\"a\".\"b\".\"c\""
+        );
+    }
+
+    #[test]
+    fn test_quote_identifier_empty() {
+        assert_eq!(quote_identifier("", "\""), "\"\"");
     }
 }
