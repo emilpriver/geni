@@ -300,40 +300,41 @@ impl DatabaseDriver for PostgresDriver {
 
             let constraints: Vec<String> = sqlx::query(
                 r#"
-                SELECT DISTINCT
-                    CASE 
-                        WHEN tc.constraint_type = 'PRIMARY KEY' THEN 
-                            'ALTER TABLE ' || tc.table_name || 
-                            ' ADD CONSTRAINT ' || tc.constraint_name || 
-                            ' PRIMARY KEY (' || kcu.column_name || ');'
-                        WHEN tc.constraint_type = 'FOREIGN KEY' THEN 
-                            'ALTER TABLE ' || tc.table_name || 
-                            ' ADD CONSTRAINT ' || tc.constraint_name || 
-                            ' FOREIGN KEY (' || kcu.column_name || ') REFERENCES ' || 
-                            ccu.table_name || '(' || ccu.column_name || ');'
-                        WHEN tc.constraint_type = 'UNIQUE' THEN 
-                            'ALTER TABLE ' || tc.table_name || 
-                            ' ADD CONSTRAINT ' || tc.constraint_name || 
-                            ' UNIQUE (' || kcu.column_name || ');'
-                        WHEN tc.constraint_type = 'CHECK' THEN 
-                            'ALTER TABLE ' || tc.table_name || 
-                            ' ADD CONSTRAINT ' || tc.constraint_name || 
+                SELECT
+                    CASE
+                        WHEN tc.constraint_type = 'PRIMARY KEY' THEN
+                            'ALTER TABLE ' || tc.table_name ||
+                            ' ADD CONSTRAINT ' || tc.constraint_name ||
+                            ' PRIMARY KEY (' || (SELECT string_agg(kcu2.column_name, ', ' ORDER BY kcu2.ordinal_position) FROM information_schema.key_column_usage kcu2 WHERE kcu2.constraint_name = tc.constraint_name AND kcu2.table_schema = 'public') || ');'
+                        WHEN tc.constraint_type = 'FOREIGN KEY' THEN
+                            'ALTER TABLE ' || tc.table_name ||
+                            ' ADD CONSTRAINT ' || tc.constraint_name ||
+                            ' FOREIGN KEY (' || (SELECT string_agg(kcu2.column_name, ', ' ORDER BY kcu2.ordinal_position) FROM information_schema.key_column_usage kcu2 WHERE kcu2.constraint_name = tc.constraint_name AND kcu2.table_schema = 'public') || ') REFERENCES ' ||
+                            (SELECT ccu2.table_name FROM information_schema.constraint_column_usage ccu2 WHERE ccu2.constraint_name = tc.constraint_name LIMIT 1) || '(' || (SELECT string_agg(kcu3.column_name, ', ' ORDER BY kcu3.ordinal_position) FROM information_schema.key_column_usage kcu3 WHERE kcu3.constraint_name = tc.constraint_name AND kcu3.table_schema = 'public') || ');'
+                        WHEN tc.constraint_type = 'UNIQUE' THEN
+                            'ALTER TABLE ' || tc.table_name ||
+                            ' ADD CONSTRAINT ' || tc.constraint_name ||
+                            ' UNIQUE (' || (SELECT string_agg(kcu2.column_name, ', ' ORDER BY kcu2.ordinal_position) FROM information_schema.key_column_usage kcu2 WHERE kcu2.constraint_name = tc.constraint_name AND kcu2.table_schema = 'public') || ');'
+                        WHEN tc.constraint_type = 'CHECK' THEN
+                            'ALTER TABLE ' || tc.table_name ||
+                            ' ADD CONSTRAINT ' || tc.constraint_name ||
                             ' CHECK (' || cc.check_clause || ');'
                     END AS sql,
-                    tc.table_name, 
+                    tc.table_name,
                     tc.constraint_name
-                FROM 
+                FROM
                     information_schema.table_constraints tc
-                JOIN 
-                    information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
-                LEFT JOIN 
-                    information_schema.constraint_column_usage ccu ON kcu.constraint_name = ccu.constraint_name
-                LEFT JOIN 
+                LEFT JOIN
                     information_schema.check_constraints cc ON tc.constraint_name = cc.constraint_name
-                WHERE 
+                WHERE
                     tc.table_schema = 'public'
-                ORDER BY 
-                    tc.table_name, 
+                GROUP BY
+                    tc.table_name,
+                    tc.constraint_name,
+                    tc.constraint_type,
+                    cc.check_clause
+                ORDER BY
+                    tc.table_name,
                     tc.constraint_name
                 "#,
             )
