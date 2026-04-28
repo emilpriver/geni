@@ -663,7 +663,10 @@ mod tests {
 
         assert_eq!(
             tunnel.database_url,
-            format!("postgres://user:secret@127.0.0.1:{}/app?sslmode=disable", test_port)
+            format!(
+                "postgres://user:secret@127.0.0.1:{}/app?sslmode=disable",
+                test_port
+            )
         );
 
         let args = fs::read_to_string(&args_path)?;
@@ -795,7 +798,10 @@ mod tests {
 
         assert_eq!(
             error.to_string(),
-            format!("requested SSH tunnel local port {} is already in use", test_port)
+            format!(
+                "requested SSH tunnel local port {} is already in use",
+                test_port
+            )
         );
 
         Ok(())

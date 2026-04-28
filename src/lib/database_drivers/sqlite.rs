@@ -16,8 +16,8 @@ pub struct SqliteDriver {
     schema_file: String,
 }
 
-impl<'a> SqliteDriver {
-    pub async fn new<'b>(
+impl SqliteDriver {
+    pub async fn new(
         db_url: &str,
         migrations_table: String,
         migrations_folder: String,
@@ -105,11 +105,7 @@ impl DatabaseDriver for SqliteDriver {
             let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.db
                 .execute(
-                    format!(
-                        "INSERT INTO {} (id) VALUES ('{}');",
-                        table, id,
-                    )
-                    .as_str(),
+                    format!("INSERT INTO {} (id) VALUES ('{}');", table, id,).as_str(),
                     params![],
                 )
                 .await?;

@@ -18,8 +18,8 @@ pub struct PostgresDriver {
     schema_file: String,
 }
 
-impl<'a> PostgresDriver {
-    pub async fn new<'b>(
+impl PostgresDriver {
+    pub async fn new(
         db_url: &str,
         database_name: &str,
         wait_timeout: Option<usize>,
@@ -218,11 +218,12 @@ impl DatabaseDriver for PostgresDriver {
             let extensions: Vec<String> = sqlx::query(
                 r#"
                 SELECT
-                    'CREATE EXTENSION IF NOT EXISTS "' || extname || '" WITH SCHEMA public;' AS sql
+                    'CREATE EXTENSION IF NOT EXISTS "' || extname || '" WITH SCHEMA ' || nspname || ';' AS sql
                 FROM
                     pg_extension
+                JOIN pg_namespace ON pg_namespace.oid = pg_extension.extnamespace
                 WHERE
-                    (SELECT nspname FROM pg_namespace WHERE oid = extnamespace) = 'public'
+                    nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
                 ORDER BY extname ASC
                 "#,
             )
@@ -240,26 +241,26 @@ impl DatabaseDriver for PostgresDriver {
 
             let tables: Vec<String> = sqlx::query(
                 r#"
-                SELECT 
-                    'CREATE TABLE ' || t.table_name || E' (\n ' || 
-                    string_agg(c.column_name || ' ' || c.data_type || ' ' || 
-                                (CASE WHEN c.character_maximum_length IS NOT NULL 
-                                    THEN '(' || c.character_maximum_length || ')' 
-                                    ELSE '' END) || 
-                                (CASE WHEN c.is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END), 
-                                E',\n ' ORDER BY c.column_name ASC) || 
+                SELECT
+                    'CREATE TABLE ' || t.table_schema || '."' || t.table_name || E'" (\n ' ||
+                    string_agg(c.column_name || ' ' || c.data_type || ' ' ||
+                                (CASE WHEN c.character_maximum_length IS NOT NULL
+                                    THEN '(' || c.character_maximum_length || ')'
+                                    ELSE '' END) ||
+                                (CASE WHEN c.is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END),
+                                E',\n ' ORDER BY c.column_name ASC) ||
                     E'\n);' AS sql
-                FROM 
+                FROM
                     information_schema.columns c
-                JOIN 
-                    information_schema.tables t ON c.table_name = t.table_name
-                WHERE 
-                    t.table_schema = 'public' 
+                JOIN
+                    information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema
+                WHERE
+                    t.table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
                     AND t.table_type = 'BASE TABLE'
-                GROUP BY 
-                    t.table_name
-                ORDER BY 
-                    t.table_name;
+                GROUP BY
+                    t.table_schema, t.table_name
+                ORDER BY
+                    t.table_schema, t.table_name;
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
@@ -276,14 +277,14 @@ impl DatabaseDriver for PostgresDriver {
 
             let views: Vec<String> = sqlx::query(
                 r#"
-                SELECT 
-                    'CREATE VIEW ' || table_name || ' AS\n' || view_definition || ';' AS sql
-                FROM 
+                SELECT
+                    'CREATE VIEW ' || table_schema || '."' || table_name || '" AS\n' || view_definition || ';' AS sql
+                FROM
                     information_schema.views
-                WHERE 
-                    table_schema = 'public'
-                ORDER BY 
-                    table_name ASC
+                WHERE
+                    table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                ORDER BY
+                    table_schema, table_name ASC
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
@@ -300,40 +301,44 @@ impl DatabaseDriver for PostgresDriver {
 
             let constraints: Vec<String> = sqlx::query(
                 r#"
-                SELECT DISTINCT
-                    CASE 
-                        WHEN tc.constraint_type = 'PRIMARY KEY' THEN 
-                            'ALTER TABLE ' || tc.table_name || 
-                            ' ADD CONSTRAINT ' || tc.constraint_name || 
-                            ' PRIMARY KEY (' || kcu.column_name || ');'
-                        WHEN tc.constraint_type = 'FOREIGN KEY' THEN 
-                            'ALTER TABLE ' || tc.table_name || 
-                            ' ADD CONSTRAINT ' || tc.constraint_name || 
-                            ' FOREIGN KEY (' || kcu.column_name || ') REFERENCES ' || 
-                            ccu.table_name || '(' || ccu.column_name || ');'
-                        WHEN tc.constraint_type = 'UNIQUE' THEN 
-                            'ALTER TABLE ' || tc.table_name || 
-                            ' ADD CONSTRAINT ' || tc.constraint_name || 
-                            ' UNIQUE (' || kcu.column_name || ');'
-                        WHEN tc.constraint_type = 'CHECK' THEN 
-                            'ALTER TABLE ' || tc.table_name || 
-                            ' ADD CONSTRAINT ' || tc.constraint_name || 
+                SELECT
+                    CASE
+                        WHEN tc.constraint_type = 'PRIMARY KEY' THEN
+                            'ALTER TABLE ' || tc.table_schema || '."' || tc.table_name ||
+                            '" ADD CONSTRAINT ' || tc.constraint_name ||
+                            ' PRIMARY KEY (' || (SELECT string_agg(kcu2.column_name, ', ' ORDER BY kcu2.ordinal_position) FROM information_schema.key_column_usage kcu2 WHERE kcu2.constraint_name = tc.constraint_name AND kcu2.table_schema = tc.table_schema) || ');'
+                        WHEN tc.constraint_type = 'FOREIGN KEY' THEN
+                            'ALTER TABLE ' || tc.table_schema || '."' || tc.table_name ||
+                            '" ADD CONSTRAINT ' || tc.constraint_name ||
+                            ' FOREIGN KEY (' || (SELECT string_agg(kcu2.column_name, ', ' ORDER BY kcu2.ordinal_position) FROM information_schema.key_column_usage kcu2 WHERE kcu2.constraint_name = tc.constraint_name AND kcu2.table_schema = tc.table_schema) || ') REFERENCES ' ||
+                            (SELECT ccu2.table_name FROM information_schema.constraint_column_usage ccu2 WHERE ccu2.constraint_name = tc.constraint_name LIMIT 1) || '(' || (SELECT string_agg(kcu3.column_name, ', ' ORDER BY kcu3.ordinal_position) FROM information_schema.key_column_usage kcu3 WHERE kcu3.constraint_name = tc.constraint_name AND kcu3.table_schema = tc.table_schema) || ');'
+                        WHEN tc.constraint_type = 'UNIQUE' THEN
+                            'ALTER TABLE ' || tc.table_schema || '."' || tc.table_name ||
+                            '" ADD CONSTRAINT ' || tc.constraint_name ||
+                            ' UNIQUE (' || (SELECT string_agg(kcu2.column_name, ', ' ORDER BY kcu2.ordinal_position) FROM information_schema.key_column_usage kcu2 WHERE kcu2.constraint_name = tc.constraint_name AND kcu2.table_schema = tc.table_schema) || ');'
+                        WHEN tc.constraint_type = 'CHECK' THEN
+                            'ALTER TABLE ' || tc.table_schema || '."' || tc.table_name ||
+                            '" ADD CONSTRAINT ' || tc.constraint_name ||
                             ' CHECK (' || cc.check_clause || ');'
                     END AS sql,
-                    tc.table_name, 
+                    tc.table_schema,
+                    tc.table_name,
                     tc.constraint_name
-                FROM 
+                FROM
                     information_schema.table_constraints tc
-                JOIN 
-                    information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
-                LEFT JOIN 
-                    information_schema.constraint_column_usage ccu ON kcu.constraint_name = ccu.constraint_name
-                LEFT JOIN 
+                LEFT JOIN
                     information_schema.check_constraints cc ON tc.constraint_name = cc.constraint_name
-                WHERE 
-                    tc.table_schema = 'public'
-                ORDER BY 
-                    tc.table_name, 
+                WHERE
+                    tc.table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                GROUP BY
+                    tc.table_schema,
+                    tc.table_name,
+                    tc.constraint_name,
+                    tc.constraint_type,
+                    cc.check_clause
+                ORDER BY
+                    tc.table_schema,
+                    tc.table_name,
                     tc.constraint_name
                 "#,
             )
@@ -351,14 +356,14 @@ impl DatabaseDriver for PostgresDriver {
 
             let indexes: Vec<String> = sqlx::query(
                 r#"
-                SELECT 
+                SELECT
                     indexdef AS sql
-                FROM 
+                FROM
                     pg_indexes
-                WHERE 
-                    schemaname = 'public'
-                ORDER BY 
-                    indexname ASC;
+                WHERE
+                    schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                ORDER BY
+                    schemaname, indexname ASC;
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
@@ -375,20 +380,20 @@ impl DatabaseDriver for PostgresDriver {
 
             let sequences: Vec<String> = sqlx::query(
                 r#"
-                SELECT 
-                    'CREATE SEQUENCE ' || sequence_name || 
-                    ' AS ' || data_type || 
-                    ' START WITH ' || start_value || 
-                    ' MINVALUE ' || minimum_value || 
-                    ' MAXVALUE ' || maximum_value || 
-                    ' INCREMENT BY ' || increment || 
+                SELECT
+                    'CREATE SEQUENCE ' || sequence_schema || '."' || sequence_name ||
+                    '" AS ' || data_type ||
+                    ' START WITH ' || start_value ||
+                    ' MINVALUE ' || minimum_value ||
+                    ' MAXVALUE ' || maximum_value ||
+                    ' INCREMENT BY ' || increment ||
                     ' CYCLE;' AS sql
-                FROM 
+                FROM
                     information_schema.sequences
-                WHERE 
-                    sequence_schema = 'public'
-                ORDER BY 
-                    sequence_name ASC;
+                WHERE
+                    sequence_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                ORDER BY
+                    sequence_schema, sequence_name ASC;
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
@@ -409,26 +414,21 @@ impl DatabaseDriver for PostgresDriver {
                     'COMMENT ON ' ||
                     CASE
                         WHEN pa.attnum > 0 THEN
-                            'COLUMN ' || pc.relname || '.' || pa.attname
+                            'COLUMN ' || n.nspname || '.' || pc.relname || '.' || pa.attname
                         ELSE
-                            'TABLE ' || pc.relname
+                            'TABLE ' || n.nspname || '.' || pc.relname
                     END ||
                     ' IS ' || pd.description || ';' AS sql
                 FROM
                     pg_class pc
+                    JOIN pg_namespace n ON n.oid = pc.relnamespace
                     JOIN pg_attribute pa ON pc.oid = pa.attrelid
                     LEFT JOIN pg_description pd ON pc.oid = pd.objoid AND pa.attnum = pd.objsubid
                 WHERE
-                    pc.relnamespace = (
-                        SELECT
-                            oid
-                        FROM
-                            pg_namespace
-                        WHERE
-                            nspname = 'public'
-                    )
+                    n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
                     AND pd.description IS NOT NULL
                 ORDER BY
+                    n.nspname,
                     pc.relname,
                     pa.attnum;
                 "#,
@@ -512,7 +512,8 @@ mod tests {
     #[test]
     fn test_generate_postgres_migrations_table_query() {
         let table_name = "schema_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (id VARCHAR(255) PRIMARY KEY)";
+        let expected =
+            "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_postgres_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }
@@ -520,7 +521,8 @@ mod tests {
     #[test]
     fn test_generate_postgres_migrations_table_query_custom() {
         let table_name = "custom_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS \"custom_migrations\" (id VARCHAR(255) PRIMARY KEY)";
+        let expected =
+            "CREATE TABLE IF NOT EXISTS \"custom_migrations\" (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_postgres_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }

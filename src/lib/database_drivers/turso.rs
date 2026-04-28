@@ -16,15 +16,14 @@ pub struct TursoDriver {
 
 impl TursoDriver {
     pub async fn new(
-        db_url: &String,
+        db_url: &str,
         _token: Option<String>,
         migrations_table: String,
         migrations_folder: String,
         schema_file: String,
     ) -> Result<TursoDriver> {
-        // Parse the turso:// URL to extract the file path
-        let path = if db_url.starts_with("turso://") {
-            &db_url["turso://".len()..]
+        let path = if let Some(stripped) = db_url.strip_prefix("turso://") {
+            stripped
         } else {
             bail!("Invalid Turso URL scheme. Must start with turso://")
         };
@@ -91,9 +90,7 @@ impl DatabaseDriver for TursoDriver {
 
             let mut stmt = self
                 .conn
-                .prepare(
-                    format!("SELECT id FROM {} ORDER BY id DESC;", table).as_str(),
-                )
+                .prepare(format!("SELECT id FROM {} ORDER BY id DESC;", table).as_str())
                 .await?;
 
             let mut rows = stmt.query(()).await?;
@@ -136,10 +133,7 @@ impl DatabaseDriver for TursoDriver {
         let fut = async move {
             let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.conn
-                .execute(
-                    format!("DELETE FROM {} WHERE id = ?", table).as_str(),
-                    [id],
-                )
+                .execute(format!("DELETE FROM {} WHERE id = ?", table).as_str(), [id])
                 .await?;
             Ok(())
         };

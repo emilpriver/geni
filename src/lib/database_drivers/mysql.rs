@@ -17,8 +17,8 @@ pub struct MySQLDriver {
     schema_file: String,
 }
 
-impl<'a> MySQLDriver {
-    pub async fn new<'b>(
+impl MySQLDriver {
+    pub async fn new(
         db_url: &str,
         database_name: &str,
         wait_timeout: Option<usize>,
@@ -283,70 +283,79 @@ impl DatabaseDriver for MySQLDriver {
 
             let constraints: Vec<String> = sqlx::query(
                 r#"
-                    SELECT DISTINCT
+                    SELECT
                         CONCAT(
-                            'ALTER TABLE ', 
-                            TABLE_NAME, 
+                            'ALTER TABLE ',
+                            TABLE_NAME,
                             ' ADD CONSTRAINT ',
-                            CASE 
+                            CASE
                                 WHEN CONSTRAINT_NAME = 'PRIMARY' THEN 'PRIMARY KEY'
-                                WHEN INDEX_NAME != 'PRIMARY' THEN 'UNIQUE'
+                                WHEN INDEX_NAME != 'PRIMARY' AND INDEX_NAME IS NOT NULL THEN 'UNIQUE'
                                 ELSE 'FOREIGN KEY'
-                            END, 
-                            ' (', 
-                            COLUMN_NAME, 
-                            CASE 
-                                WHEN REFERENCED_TABLE_NAME IS NOT NULL THEN 
-                                    CONCAT(') REFERENCES ', REFERENCED_TABLE_NAME, ' (', REFERENCED_COLUMN_NAME, ')')
+                            END,
+                            ' (',
+                            GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ', '),
+                            CASE
+                                WHEN MAX(REFERENCED_TABLE_NAME) IS NOT NULL THEN
+                                    CONCAT(') REFERENCES ', MAX(REFERENCED_TABLE_NAME), ' (', GROUP_CONCAT(REFERENCED_COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ', '), ')')
                                 ELSE ')'
-                            END, 
+                            END,
                             ';'
                         ) AS create_constraint_stmt,
                         TABLE_NAME
-                    FROM 
+                    FROM
                         (
-                        SELECT 
-                            TABLE_NAME, 
-                            COLUMN_NAME, 
-                            CONSTRAINT_NAME, 
-                            NULL AS INDEX_NAME, 
-                            NULL AS REFERENCED_TABLE_NAME, 
-                            NULL AS REFERENCED_COLUMN_NAME
-                        FROM 
+                        SELECT
+                            TABLE_NAME,
+                            COLUMN_NAME,
+                            CONSTRAINT_NAME,
+                            NULL AS INDEX_NAME,
+                            NULL AS REFERENCED_TABLE_NAME,
+                            NULL AS REFERENCED_COLUMN_NAME,
+                            ORDINAL_POSITION
+                        FROM
                             INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-                        WHERE 
-                            TABLE_SCHEMA = ? 
+                        WHERE
+                            TABLE_SCHEMA = ?
                             AND CONSTRAINT_NAME = 'PRIMARY'
                         UNION ALL
-                        SELECT 
-                            TABLE_NAME, 
-                            COLUMN_NAME, 
-                            NULL AS CONSTRAINT_NAME, 
-                            INDEX_NAME, 
-                            NULL AS REFERENCED_TABLE_NAME, 
-                            NULL AS REFERENCED_COLUMN_NAME
-                        FROM 
+                        SELECT
+                            TABLE_NAME,
+                            COLUMN_NAME,
+                            NULL AS CONSTRAINT_NAME,
+                            INDEX_NAME,
+                            NULL AS REFERENCED_TABLE_NAME,
+                            NULL AS REFERENCED_COLUMN_NAME,
+                            SEQ_IN_INDEX AS ORDINAL_POSITION
+                        FROM
                             INFORMATION_SCHEMA.STATISTICS
-                        WHERE 
-                            TABLE_SCHEMA = ? 
+                        WHERE
+                            TABLE_SCHEMA = ?
+                            AND NON_UNIQUE = 0
                             AND INDEX_NAME != 'PRIMARY'
                         UNION ALL
-                        SELECT 
-                            TABLE_NAME, 
-                            COLUMN_NAME, 
-                            CONSTRAINT_NAME, 
-                            NULL AS INDEX_NAME, 
-                            REFERENCED_TABLE_NAME, 
-                            REFERENCED_COLUMN_NAME
-                        FROM 
+                        SELECT
+                            TABLE_NAME,
+                            COLUMN_NAME,
+                            CONSTRAINT_NAME,
+                            NULL AS INDEX_NAME,
+                            REFERENCED_TABLE_NAME,
+                            REFERENCED_COLUMN_NAME,
+                            ORDINAL_POSITION
+                        FROM
                             INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-                        WHERE 
-                            TABLE_SCHEMA = ? 
+                        WHERE
+                            TABLE_SCHEMA = ?
                             AND REFERENCED_TABLE_NAME IS NOT NULL
-                        ORDER BY COLUMN_NAME asc
                         ) AS constraints
-                    ORDER BY 
-                        TABLE_NAME asc
+                    GROUP BY
+                        TABLE_NAME,
+                        CONSTRAINT_NAME,
+                        INDEX_NAME
+                    ORDER BY
+                        TABLE_NAME,
+                        CONSTRAINT_NAME,
+                        INDEX_NAME
                 "#,
                 )
                 .bind(&self.db_name)
@@ -366,24 +375,25 @@ impl DatabaseDriver for MySQLDriver {
 
             let indexes: Vec<String> = sqlx::query(
                 r#"
-                    SELECT 
+                    SELECT
                         CONCAT(
-                            'CREATE INDEX ', 
-                            INDEX_NAME, 
-                            ' ON ', 
-                            TABLE_NAME, 
-                            ' (', 
-                            COLUMN_NAME, 
+                            'CREATE INDEX ',
+                            INDEX_NAME,
+                            ' ON ',
+                            TABLE_NAME,
+                            ' (',
+                            GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ', '),
                             ');'
                         ) AS create_index_stmt
-                    FROM 
+                    FROM
                         INFORMATION_SCHEMA.STATISTICS
-                    WHERE 
+                    WHERE
                         TABLE_SCHEMA = ?
-                    GROUP BY 
-                        TABLE_NAME, INDEX_NAME, COLUMN_NAME
-                    ORDER BY 
-                        TABLE_NAME, COLUMN_NAME asc
+                        AND INDEX_NAME != 'PRIMARY'
+                    GROUP BY
+                        TABLE_NAME, INDEX_NAME
+                    ORDER BY
+                        TABLE_NAME, INDEX_NAME
                 "#,
             )
             .bind(&self.db_name)
@@ -505,7 +515,8 @@ mod tests {
     #[test]
     fn test_generate_mysql_migrations_table_query() {
         let table_name = "schema_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS `schema_migrations` (id VARCHAR(255) PRIMARY KEY)";
+        let expected =
+            "CREATE TABLE IF NOT EXISTS `schema_migrations` (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_mysql_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }
@@ -710,7 +721,8 @@ mod tests {
     #[test]
     fn test_generate_mysql_migrations_table_query_schema_qualified() {
         let table_name = "migrations.migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS `migrations`.`migrations` (id VARCHAR(255) PRIMARY KEY)";
+        let expected =
+            "CREATE TABLE IF NOT EXISTS `migrations`.`migrations` (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_mysql_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }
