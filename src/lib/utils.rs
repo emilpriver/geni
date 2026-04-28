@@ -34,7 +34,7 @@ pub fn get_local_migrations(folder: &PathBuf, ending: &str) -> Result<Vec<(i64, 
         })
         .collect::<Vec<(i64, PathBuf)>>();
 
-    sorted.sort_by(|a, b| a.0.cmp(&b.0));
+    sorted.sort_by_key(|a| a.0);
 
     Ok(sorted)
 }
