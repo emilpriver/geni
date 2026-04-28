@@ -512,7 +512,8 @@ mod tests {
     #[test]
     fn test_generate_postgres_migrations_table_query() {
         let table_name = "schema_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (id VARCHAR(255) PRIMARY KEY)";
+        let expected =
+            "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_postgres_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }
@@ -520,7 +521,8 @@ mod tests {
     #[test]
     fn test_generate_postgres_migrations_table_query_custom() {
         let table_name = "custom_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS \"custom_migrations\" (id VARCHAR(255) PRIMARY KEY)";
+        let expected =
+            "CREATE TABLE IF NOT EXISTS \"custom_migrations\" (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_postgres_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }

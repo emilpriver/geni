@@ -74,8 +74,7 @@ async fn test_migrate(database: Database, db_url: &str, migrations_table: &str) 
     let tmp_dir = TempDir::new()?;
     let migration_folder_string = tmp_dir.path().to_str().unwrap().to_string();
     let database_wait_timeout = 30;
-    let database_schema_file =
-        env::var("DATABASE_SCHEMA_FILE").unwrap_or("schema.sql".to_string());
+    let database_schema_file = env::var("DATABASE_SCHEMA_FILE").unwrap_or("schema.sql".to_string());
 
     generate_test_migrations(&migration_folder_string)?;
 
@@ -303,7 +302,9 @@ async fn test_migrate_sqlite() {
     let path = std::path::Path::new(&filename);
     File::create(path).unwrap();
     let url = format!("sqlite://{}", path.to_str().unwrap());
-    test_migrate(Database::SQLite, &url, "schema_migrations").await.unwrap();
+    test_migrate(Database::SQLite, &url, "schema_migrations")
+        .await
+        .unwrap();
 }
 
 #[tokio::test]

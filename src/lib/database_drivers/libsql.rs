@@ -88,11 +88,7 @@ impl DatabaseDriver for LibSQLDriver {
             let mut result = self
                 .db
                 .query(
-                    format!(
-                        " SELECT id FROM {} ORDER BY id DESC;",
-                        table
-                    )
-                    .as_str(),
+                    format!(" SELECT id FROM {} ORDER BY id DESC;", table).as_str(),
                     params![],
                 )
                 .await?;

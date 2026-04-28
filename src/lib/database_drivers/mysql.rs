@@ -515,7 +515,8 @@ mod tests {
     #[test]
     fn test_generate_mysql_migrations_table_query() {
         let table_name = "schema_migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS `schema_migrations` (id VARCHAR(255) PRIMARY KEY)";
+        let expected =
+            "CREATE TABLE IF NOT EXISTS `schema_migrations` (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_mysql_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }
@@ -720,7 +721,8 @@ mod tests {
     #[test]
     fn test_generate_mysql_migrations_table_query_schema_qualified() {
         let table_name = "migrations.migrations";
-        let expected = "CREATE TABLE IF NOT EXISTS `migrations`.`migrations` (id VARCHAR(255) PRIMARY KEY)";
+        let expected =
+            "CREATE TABLE IF NOT EXISTS `migrations`.`migrations` (id VARCHAR(255) PRIMARY KEY)";
         let result = generate_mysql_migrations_table_query(table_name);
         assert_eq!(result, expected);
     }

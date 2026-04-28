@@ -105,11 +105,7 @@ impl DatabaseDriver for SqliteDriver {
             let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.db
                 .execute(
-                    format!(
-                        "INSERT INTO {} (id) VALUES ('{}');",
-                        table, id,
-                    )
-                    .as_str(),
+                    format!("INSERT INTO {} (id) VALUES ('{}');", table, id,).as_str(),
                     params![],
                 )
                 .await?;

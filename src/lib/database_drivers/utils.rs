@@ -234,7 +234,10 @@ mod tests {
     #[test]
     fn test_quote_identifier_simple() {
         assert_eq!(quote_identifier("users", "\""), "\"users\"");
-        assert_eq!(quote_identifier("schema_migrations", "`"), "`schema_migrations`");
+        assert_eq!(
+            quote_identifier("schema_migrations", "`"),
+            "`schema_migrations`"
+        );
     }
 
     #[test]
@@ -251,10 +254,7 @@ mod tests {
 
     #[test]
     fn test_quote_identifier_multiple_dots() {
-        assert_eq!(
-            quote_identifier("a.b.c", "\""),
-            "\"a\".\"b\".\"c\""
-        );
+        assert_eq!(quote_identifier("a.b.c", "\""), "\"a\".\"b\".\"c\"");
     }
 
     #[test]

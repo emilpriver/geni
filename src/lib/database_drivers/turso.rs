@@ -90,9 +90,7 @@ impl DatabaseDriver for TursoDriver {
 
             let mut stmt = self
                 .conn
-                .prepare(
-                    format!("SELECT id FROM {} ORDER BY id DESC;", table).as_str(),
-                )
+                .prepare(format!("SELECT id FROM {} ORDER BY id DESC;", table).as_str())
                 .await?;
 
             let mut rows = stmt.query(()).await?;
@@ -135,10 +133,7 @@ impl DatabaseDriver for TursoDriver {
         let fut = async move {
             let table = utils::quote_identifier(&self.migrations_table, "\"");
             self.conn
-                .execute(
-                    format!("DELETE FROM {} WHERE id = ?", table).as_str(),
-                    [id],
-                )
+                .execute(format!("DELETE FROM {} WHERE id = ?", table).as_str(), [id])
                 .await?;
             Ok(())
         };
