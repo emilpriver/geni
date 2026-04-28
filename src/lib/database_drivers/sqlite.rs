@@ -16,8 +16,8 @@ pub struct SqliteDriver {
     schema_file: String,
 }
 
-impl<'a> SqliteDriver {
-    pub async fn new<'b>(
+impl SqliteDriver {
+    pub async fn new(
         db_url: &str,
         migrations_table: String,
         migrations_folder: String,

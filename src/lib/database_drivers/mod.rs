@@ -3,7 +3,7 @@ use anyhow::bail;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::pin::Pin;
-use std::usize;
+
 
 pub mod libsql;
 pub mod maria;
@@ -90,7 +90,7 @@ pub async fn new(
     match scheme {
         "http" | "https" | "libsql" => {
             let driver = libsql::LibSQLDriver::new(
-                &parsed_db_url.to_string(),
+                parsed_db_url.as_str(),
                 db_token,
                 migrations_table,
                 migrations_folder,
@@ -101,7 +101,7 @@ pub async fn new(
         }
         "turso" => {
             let driver = turso::TursoDriver::new(
-                &parsed_db_url.to_string(),
+                parsed_db_url.as_str(),
                 db_token,
                 migrations_table,
                 migrations_folder,

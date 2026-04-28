@@ -18,8 +18,8 @@ pub struct MariaDBDriver {
     schema_file: String,
 }
 
-impl<'a> MariaDBDriver {
-    pub async fn new<'b>(
+impl MariaDBDriver {
+    pub async fn new(
         db_url: &str,
         database_name: &str,
         wait_timeout: Option<usize>,

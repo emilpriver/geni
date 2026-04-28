@@ -14,9 +14,9 @@ pub struct LibSQLDriver {
     schema_file: String,
 }
 
-impl<'a> LibSQLDriver {
-    pub async fn new<'b>(
-        db_url: &String,
+impl LibSQLDriver {
+    pub async fn new(
+        db_url: &str,
         token: Option<String>,
         migrations_table: String,
         migrations_folder: String,

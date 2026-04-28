@@ -17,8 +17,8 @@ pub struct MySQLDriver {
     schema_file: String,
 }
 
-impl<'a> MySQLDriver {
-    pub async fn new<'b>(
+impl MySQLDriver {
+    pub async fn new(
         db_url: &str,
         database_name: &str,
         wait_timeout: Option<usize>,

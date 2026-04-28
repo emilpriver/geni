@@ -18,8 +18,8 @@ pub struct PostgresDriver {
     schema_file: String,
 }
 
-impl<'a> PostgresDriver {
-    pub async fn new<'b>(
+impl PostgresDriver {
+    pub async fn new(
         db_url: &str,
         database_name: &str,
         wait_timeout: Option<usize>,
