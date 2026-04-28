@@ -484,3 +484,136 @@ async fn test_dump_composite_primary_key_sqlite() -> Result<()> {
 
     Ok(())
 }
+
+async fn setup_multi_schema_postgres(database_url: &str) -> Result<()> {
+    let mut create_client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        false,
+    )
+    .await?;
+
+    create_client.create_database().await?;
+
+    drop(create_client);
+
+    let mut client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        true,
+    )
+    .await?;
+
+    let queries = vec![
+        "CREATE SCHEMA authz;",
+        r#"CREATE TABLE authz."group" (name TEXT PRIMARY KEY);"#,
+        r#"CREATE SEQUENCE authz."test";"#,
+        r#"CREATE TABLE public."group" (name TEXT PRIMARY KEY);"#,
+        r#"CREATE SEQUENCE public."test";"#,
+    ];
+
+    for query in queries {
+        client.execute(query, false).await?;
+    }
+
+    Ok(())
+}
+
+async fn run_multi_schema_dump_test(
+    database_url: &str,
+    schema_file: &str,
+    migrations_folder: &str,
+) -> Result<()> {
+    dump(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        migrations_folder.to_string(),
+        schema_file.to_string(),
+        Some(30),
+    )
+    .await?;
+
+    let schema_path = Path::new(migrations_folder).join(schema_file);
+    assert!(schema_path.exists(), "Schema file should be created");
+
+    let schema_content = fs::read_to_string(&schema_path)?;
+
+    assert!(
+        schema_content.contains("authz"),
+        "Schema should contain 'authz' references, got:\n{}",
+        schema_content
+    );
+
+    assert!(
+        schema_content.contains("public"),
+        "Schema should contain 'public' references, got:\n{}",
+        schema_content
+    );
+
+    let table_lines: Vec<&str> = schema_content
+        .lines()
+        .filter(|l| l.contains("CREATE TABLE") && l.contains("\"group\""))
+        .collect();
+
+    assert_eq!(
+        table_lines.len(),
+        2,
+        "Should have 2 CREATE TABLE lines for 'group' (one per schema), got {} lines:\n{}\nFull schema:\n{}",
+        table_lines.len(),
+        table_lines.join("\n"),
+        schema_content
+    );
+
+    let sequence_lines: Vec<&str> = schema_content
+        .lines()
+        .filter(|l| l.contains("CREATE SEQUENCE") && l.contains("\"test\""))
+        .collect();
+
+    assert_eq!(
+        sequence_lines.len(),
+        2,
+        "Should have 2 CREATE SEQUENCE lines for 'test' (one per schema), got {} lines:\n{}\nFull schema:\n{}",
+        sequence_lines.len(),
+        sequence_lines.join("\n"),
+        schema_content
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_dump_multi_schema_postgres() -> Result<()> {
+    let container = GenericImage::new("postgres", "18.0")
+        .with_exposed_port(5432.tcp())
+        .with_wait_for(WaitFor::message_on_stdout(
+            "database system is ready to accept connections",
+        ))
+        .with_env_var("POSTGRES_DB", "development")
+        .with_env_var("POSTGRES_USER", "postgres")
+        .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
+        .start()
+        .await
+        .expect("Failed to start postgres");
+    let host_port = container.get_host_port_ipv4(5432).await?;
+    let url = format!(
+        "postgres://postgres:mysecretpassword@localhost:{}/app?sslmode=disable",
+        host_port
+    );
+
+    let tmp_dir = TempDir::new()?;
+    let migrations_folder = tmp_dir.path().to_str().unwrap().to_string();
+    setup_multi_schema_postgres(&url).await?;
+    run_multi_schema_dump_test(&url, "postgres_multi_schema.sql", &migrations_folder).await?;
+
+    drop(container);
+    Ok(())
+}
