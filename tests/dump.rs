@@ -43,7 +43,7 @@ async fn setup_test_schema(database_url: &str) -> Result<()> {
 
     let test_queries = vec![
         "CREATE TABLE test_users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE);",
-        "CREATE TABLE test_posts (id INTEGER PRIMARY KEY, title TEXT NOT NULL, content TEXT, user_id INTEGER);",
+        "CREATE TABLE test_posts (id INTEGER PRIMARY KEY, title TEXT NOT NULL, content TEXT, user_id INTEGER REFERENCES test_users(id) ON DELETE CASCADE);",
         "CREATE INDEX idx_posts_user_id ON test_posts(user_id);",
     ];
 

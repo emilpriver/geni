@@ -310,8 +310,11 @@ impl DatabaseDriver for PostgresDriver {
                         WHEN tc.constraint_type = 'FOREIGN KEY' THEN
                             'ALTER TABLE ' || tc.table_schema || '."' || tc.table_name ||
                             '" ADD CONSTRAINT ' || tc.constraint_name ||
-                            ' FOREIGN KEY (' || (SELECT string_agg(kcu2.column_name, ', ' ORDER BY kcu2.ordinal_position) FROM information_schema.key_column_usage kcu2 WHERE kcu2.constraint_name = tc.constraint_name AND kcu2.table_schema = tc.table_schema) || ') REFERENCES ' ||
-                            (SELECT ccu2.table_name FROM information_schema.constraint_column_usage ccu2 WHERE ccu2.constraint_name = tc.constraint_name LIMIT 1) || '(' || (SELECT string_agg(kcu3.column_name, ', ' ORDER BY kcu3.ordinal_position) FROM information_schema.key_column_usage kcu3 WHERE kcu3.constraint_name = tc.constraint_name AND kcu3.table_schema = tc.table_schema) || ');'
+                            ' FOREIGN KEY (' || (SELECT string_agg(kcu_fk.column_name, ', ' ORDER BY kcu_fk.ordinal_position) FROM information_schema.key_column_usage kcu_fk WHERE kcu_fk.constraint_name = tc.constraint_name AND kcu_fk.table_schema = tc.table_schema) || ') REFERENCES ' ||
+                            (SELECT kcu_ref.table_schema || '.' || kcu_ref.table_name FROM information_schema.referential_constraints rc JOIN information_schema.key_column_usage kcu_ref ON rc.unique_constraint_name = kcu_ref.constraint_name AND rc.constraint_schema = kcu_ref.table_schema WHERE rc.constraint_name = tc.constraint_name LIMIT 1) || '(' || (SELECT string_agg(kcu_ref.column_name, ', ' ORDER BY kcu_ref.ordinal_position) FROM information_schema.referential_constraints rc JOIN information_schema.key_column_usage kcu_ref ON rc.unique_constraint_name = kcu_ref.constraint_name AND rc.constraint_schema = kcu_ref.table_schema WHERE rc.constraint_name = tc.constraint_name) || ')' ||
+                            COALESCE((SELECT CASE WHEN delete_rule != 'NO ACTION' THEN ' ON DELETE ' || delete_rule ELSE '' END FROM information_schema.referential_constraints WHERE constraint_name = tc.constraint_name AND constraint_schema = tc.table_schema LIMIT 1), '') ||
+                            COALESCE((SELECT CASE WHEN update_rule != 'NO ACTION' THEN ' ON UPDATE ' || update_rule ELSE '' END FROM information_schema.referential_constraints WHERE constraint_name = tc.constraint_name AND constraint_schema = tc.table_schema LIMIT 1), '') ||
+                            ';'
                         WHEN tc.constraint_type = 'UNIQUE' THEN
                             'ALTER TABLE ' || tc.table_schema || '."' || tc.table_name ||
                             '" ADD CONSTRAINT ' || tc.constraint_name ||
@@ -374,6 +377,7 @@ impl DatabaseDriver for PostgresDriver {
                 schema.push_str("-- INDEXES \n\n");
                 for ele in indexes.iter() {
                     schema.push_str(ele.as_str());
+                    schema.push(';');
                     schema.push_str("\n\n")
                 }
             }
