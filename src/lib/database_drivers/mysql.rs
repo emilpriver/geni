@@ -297,7 +297,9 @@ impl DatabaseDriver for MySQLDriver {
                             GROUP_CONCAT(COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ', '),
                             CASE
                                 WHEN MAX(REFERENCED_TABLE_NAME) IS NOT NULL THEN
-                                    CONCAT(') REFERENCES ', MAX(REFERENCED_TABLE_NAME), ' (', GROUP_CONCAT(REFERENCED_COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ', '), ')')
+                                    CONCAT(') REFERENCES ', MAX(REFERENCED_TABLE_NAME), ' (', GROUP_CONCAT(REFERENCED_COLUMN_NAME ORDER BY ORDINAL_POSITION SEPARATOR ', '), ')',
+                                    IF(MAX(DELETE_RULE) != 'RESTRICT' AND MAX(DELETE_RULE) != 'NO ACTION', CONCAT(' ON DELETE ', MAX(DELETE_RULE)), ''),
+                                    IF(MAX(UPDATE_RULE) != 'RESTRICT' AND MAX(UPDATE_RULE) != 'NO ACTION', CONCAT(' ON UPDATE ', MAX(UPDATE_RULE)), ''))
                                 ELSE ')'
                             END,
                             ';'
@@ -312,7 +314,9 @@ impl DatabaseDriver for MySQLDriver {
                             NULL AS INDEX_NAME,
                             NULL AS REFERENCED_TABLE_NAME,
                             NULL AS REFERENCED_COLUMN_NAME,
-                            ORDINAL_POSITION
+                            ORDINAL_POSITION,
+                            NULL AS DELETE_RULE,
+                            NULL AS UPDATE_RULE
                         FROM
                             INFORMATION_SCHEMA.KEY_COLUMN_USAGE
                         WHERE
@@ -326,7 +330,9 @@ impl DatabaseDriver for MySQLDriver {
                             INDEX_NAME,
                             NULL AS REFERENCED_TABLE_NAME,
                             NULL AS REFERENCED_COLUMN_NAME,
-                            SEQ_IN_INDEX AS ORDINAL_POSITION
+                            SEQ_IN_INDEX AS ORDINAL_POSITION,
+                            NULL AS DELETE_RULE,
+                            NULL AS UPDATE_RULE
                         FROM
                             INFORMATION_SCHEMA.STATISTICS
                         WHERE
@@ -335,18 +341,24 @@ impl DatabaseDriver for MySQLDriver {
                             AND INDEX_NAME != 'PRIMARY'
                         UNION ALL
                         SELECT
-                            TABLE_NAME,
-                            COLUMN_NAME,
-                            CONSTRAINT_NAME,
+                            kcu.TABLE_NAME,
+                            kcu.COLUMN_NAME,
+                            kcu.CONSTRAINT_NAME,
                             NULL AS INDEX_NAME,
-                            REFERENCED_TABLE_NAME,
-                            REFERENCED_COLUMN_NAME,
-                            ORDINAL_POSITION
+                            kcu.REFERENCED_TABLE_NAME,
+                            kcu.REFERENCED_COLUMN_NAME,
+                            kcu.ORDINAL_POSITION,
+                            rc.DELETE_RULE,
+                            rc.UPDATE_RULE
                         FROM
-                            INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                            INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+                        JOIN
+                            INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+                            ON kcu.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
+                            AND kcu.TABLE_SCHEMA = rc.CONSTRAINT_SCHEMA
                         WHERE
-                            TABLE_SCHEMA = ?
-                            AND REFERENCED_TABLE_NAME IS NOT NULL
+                            kcu.TABLE_SCHEMA = ?
+                            AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
                         ) AS constraints
                     GROUP BY
                         TABLE_NAME,
