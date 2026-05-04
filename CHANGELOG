@@ -1,3 +1,5 @@
 ## Unreleased
 
-* Improved schema dump for PostgreSQL, MariaDB, and MySQL databases.  #301
+## [v1.3.2] - 2026-05-04
+
+* Improved schema dump for PostgreSQL, MariaDB, and MySQL databases. ([#301](https://github.com/emilpriver/geni/pull/301))
