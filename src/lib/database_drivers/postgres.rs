@@ -241,14 +241,14 @@ impl DatabaseDriver for PostgresDriver {
 
             let schemas: Vec<String> = sqlx::query(
                 r#"
-                SELECT DISTINCT
-                    'CREATE SCHEMA IF NOT EXISTS ' || table_schema || ';' AS sql
-                FROM
-                    information_schema.tables
-                WHERE
-                    table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-                ORDER BY
-                    table_schema ASC
+                SELECT
+                    'CREATE SCHEMA IF NOT EXISTS ' || s || ';' AS sql
+                FROM (
+                    SELECT DISTINCT table_schema AS s
+                    FROM information_schema.tables
+                    WHERE table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                ) AS schemas
+                ORDER BY s ASC
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))
@@ -365,6 +365,13 @@ impl DatabaseDriver for PostgresDriver {
                     tc.constraint_type,
                     cc.check_clause
                 ORDER BY
+                    CASE tc.constraint_type
+                        WHEN 'PRIMARY KEY' THEN 1
+                        WHEN 'UNIQUE' THEN 2
+                        WHEN 'FOREIGN KEY' THEN 3
+                        WHEN 'CHECK' THEN 4
+                        ELSE 5
+                    END,
                     tc.table_schema,
                     tc.table_name,
                     tc.constraint_name
