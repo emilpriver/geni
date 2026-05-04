@@ -1,0 +1,3 @@
+## Unreleased
+
+* Improved schema dump for PostgreSQL, MariaDB, and MySQL databases.  #301
