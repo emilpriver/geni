@@ -644,10 +644,12 @@ async fn setup_pk_duplication_test(database_url: &str) -> Result<()> {
     )
     .await?;
 
-    client.execute(
-        r#"CREATE TABLE pk_test (id TEXT PRIMARY KEY, name TEXT NOT NULL);"#,
-        false,
-    ).await?;
+    client
+        .execute(
+            r#"CREATE TABLE pk_test (id TEXT PRIMARY KEY, name TEXT NOT NULL);"#,
+            false,
+        )
+        .await?;
 
     Ok(())
 }
@@ -744,10 +746,12 @@ async fn setup_not_null_duplication_test(database_url: &str) -> Result<()> {
     )
     .await?;
 
-    client.execute(
-        r#"CREATE TABLE notnull_test (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT);"#,
-        false,
-    ).await?;
+    client
+        .execute(
+            r#"CREATE TABLE notnull_test (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT);"#,
+            false,
+        )
+        .await?;
 
     Ok(())
 }
@@ -838,10 +842,12 @@ async fn setup_create_schema_test(database_url: &str) -> Result<()> {
     .await?;
 
     client.execute("CREATE SCHEMA auth;", false).await?;
-    client.execute(
-        r#"CREATE TABLE auth."group" (name TEXT PRIMARY KEY);"#,
-        false,
-    ).await?;
+    client
+        .execute(
+            r#"CREATE TABLE auth."group" (name TEXT PRIMARY KEY);"#,
+            false,
+        )
+        .await?;
 
     Ok(())
 }
@@ -929,10 +935,12 @@ async fn setup_on_update_test(database_url: &str) -> Result<()> {
     )
     .await?;
 
-    client.execute(
-        r#"CREATE TABLE onupdate_parent (id TEXT PRIMARY KEY, name TEXT NOT NULL);"#,
-        false,
-    ).await?;
+    client
+        .execute(
+            r#"CREATE TABLE onupdate_parent (id TEXT PRIMARY KEY, name TEXT NOT NULL);"#,
+            false,
+        )
+        .await?;
 
     client.execute(
         r#"CREATE TABLE onupdate_child (
