@@ -239,6 +239,30 @@ impl DatabaseDriver for PostgresDriver {
                 }
             }
 
+            let schemas: Vec<String> = sqlx::query(
+                r#"
+                SELECT
+                    'CREATE SCHEMA IF NOT EXISTS ' || s || ';' AS sql
+                FROM (
+                    SELECT DISTINCT table_schema AS s
+                    FROM information_schema.tables
+                    WHERE table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                ) AS schemas
+                ORDER BY s ASC
+                "#,
+            )
+            .map(|row: PgRow| row.get("sql"))
+            .fetch_all(&mut self.db)
+            .await?;
+
+            if !schemas.is_empty() {
+                schema.push_str("-- SCHEMAS \n\n");
+                for ele in schemas.iter() {
+                    schema.push_str(ele.as_str());
+                    schema.push_str("\n\n")
+                }
+            }
+
             let tables: Vec<String> = sqlx::query(
                 r#"
                 SELECT
@@ -333,6 +357,7 @@ impl DatabaseDriver for PostgresDriver {
                     information_schema.check_constraints cc ON tc.constraint_name = cc.constraint_name
                 WHERE
                     tc.table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                    AND NOT (tc.constraint_type = 'CHECK' AND cc.check_clause LIKE '%IS NOT NULL%')
                 GROUP BY
                     tc.table_schema,
                     tc.table_name,
@@ -340,6 +365,13 @@ impl DatabaseDriver for PostgresDriver {
                     tc.constraint_type,
                     cc.check_clause
                 ORDER BY
+                    CASE tc.constraint_type
+                        WHEN 'PRIMARY KEY' THEN 1
+                        WHEN 'UNIQUE' THEN 2
+                        WHEN 'FOREIGN KEY' THEN 3
+                        WHEN 'CHECK' THEN 4
+                        ELSE 5
+                    END,
                     tc.table_schema,
                     tc.table_name,
                     tc.constraint_name
@@ -360,13 +392,24 @@ impl DatabaseDriver for PostgresDriver {
             let indexes: Vec<String> = sqlx::query(
                 r#"
                 SELECT
-                    indexdef AS sql
+                    pi.indexdef AS sql
                 FROM
-                    pg_indexes
+                    pg_indexes pi
+                JOIN
+                    pg_index i ON i.indexrelid = (
+                        SELECT c.oid FROM pg_class c
+                        WHERE c.relname = pi.indexname
+                        AND c.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = pi.schemaname)
+                    )
                 WHERE
-                    schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                    pi.schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                    AND i.indisprimary = false
+                    AND NOT EXISTS (
+                        SELECT 1 FROM pg_constraint c
+                        WHERE c.conindid = i.indexrelid AND c.contype = 'u'
+                    )
                 ORDER BY
-                    schemaname, indexname ASC;
+                    pi.schemaname, pi.indexname ASC;
                 "#,
             )
             .map(|row: PgRow| row.get("sql"))

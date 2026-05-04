@@ -617,3 +617,496 @@ async fn test_dump_multi_schema_postgres() -> Result<()> {
     drop(container);
     Ok(())
 }
+
+async fn setup_pk_duplication_test(database_url: &str) -> Result<()> {
+    let mut create_client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        false,
+    )
+    .await?;
+
+    create_client.create_database().await?;
+    drop(create_client);
+
+    let mut client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        true,
+    )
+    .await?;
+
+    client
+        .execute(
+            r#"CREATE TABLE pk_test (id TEXT PRIMARY KEY, name TEXT NOT NULL);"#,
+            false,
+        )
+        .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_dump_postgres_no_duplicate_primary_key() -> Result<()> {
+    let container = GenericImage::new("postgres", "18.0")
+        .with_exposed_port(5432.tcp())
+        .with_wait_for(WaitFor::message_on_stdout(
+            "database system is ready to accept connections",
+        ))
+        .with_env_var("POSTGRES_DB", "development")
+        .with_env_var("POSTGRES_USER", "postgres")
+        .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
+        .start()
+        .await
+        .expect("Failed to start postgres");
+    let host_port = container.get_host_port_ipv4(5432).await?;
+    let url = format!(
+        "postgres://postgres:mysecretpassword@localhost:{}/app?sslmode=disable",
+        host_port
+    );
+
+    let tmp_dir = TempDir::new()?;
+    let migrations_folder = tmp_dir.path().to_str().unwrap().to_string();
+    setup_pk_duplication_test(&url).await?;
+
+    dump(
+        url.clone(),
+        None,
+        "schema_migrations".to_string(),
+        migrations_folder.to_string(),
+        "pk_test_schema.sql".to_string(),
+        Some(30),
+    )
+    .await?;
+
+    let schema_path = Path::new(&migrations_folder).join("pk_test_schema.sql");
+    let schema_content = fs::read_to_string(&schema_path)?;
+
+    let pk_constraint_lines: Vec<&str> = schema_content
+        .lines()
+        .filter(|l| l.contains("pk_test_pkey") && l.contains("PRIMARY KEY"))
+        .collect();
+
+    assert_eq!(
+        pk_constraint_lines.len(),
+        1,
+        "Should have exactly one PRIMARY KEY constraint for pk_test_pkey, got {} lines:\n{}\nFull schema:\n{}",
+        pk_constraint_lines.len(),
+        pk_constraint_lines.join("\n"),
+        schema_content
+    );
+
+    let pk_index_lines: Vec<&str> = schema_content
+        .lines()
+        .filter(|l| l.contains("pk_test_pkey") && l.contains("CREATE UNIQUE INDEX"))
+        .collect();
+
+    assert_eq!(
+        pk_index_lines.len(),
+        0,
+        "Should NOT have a CREATE UNIQUE INDEX for pk_test_pkey (PK indexes should be excluded), got:\n{}",
+        pk_index_lines.join("\n")
+    );
+
+    drop(container);
+    Ok(())
+}
+
+async fn setup_not_null_duplication_test(database_url: &str) -> Result<()> {
+    let mut create_client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        false,
+    )
+    .await?;
+
+    create_client.create_database().await?;
+    drop(create_client);
+
+    let mut client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        true,
+    )
+    .await?;
+
+    client
+        .execute(
+            r#"CREATE TABLE notnull_test (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT);"#,
+            false,
+        )
+        .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_dump_postgres_no_duplicate_not_null() -> Result<()> {
+    let container = GenericImage::new("postgres", "18.0")
+        .with_exposed_port(5432.tcp())
+        .with_wait_for(WaitFor::message_on_stdout(
+            "database system is ready to accept connections",
+        ))
+        .with_env_var("POSTGRES_DB", "development")
+        .with_env_var("POSTGRES_USER", "postgres")
+        .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
+        .start()
+        .await
+        .expect("Failed to start postgres");
+    let host_port = container.get_host_port_ipv4(5432).await?;
+    let url = format!(
+        "postgres://postgres:mysecretpassword@localhost:{}/app?sslmode=disable",
+        host_port
+    );
+
+    let tmp_dir = TempDir::new()?;
+    let migrations_folder = tmp_dir.path().to_str().unwrap().to_string();
+    setup_not_null_duplication_test(&url).await?;
+
+    dump(
+        url.clone(),
+        None,
+        "schema_migrations".to_string(),
+        migrations_folder.to_string(),
+        "notnull_test_schema.sql".to_string(),
+        Some(30),
+    )
+    .await?;
+
+    let schema_path = Path::new(&migrations_folder).join("notnull_test_schema.sql");
+    let schema_content = fs::read_to_string(&schema_path)?;
+
+    let not_null_check_lines: Vec<&str> = schema_content
+        .lines()
+        .filter(|l| l.contains("CHECK") && l.contains("IS NOT NULL"))
+        .collect();
+
+    assert_eq!(
+        not_null_check_lines.len(),
+        0,
+        "Should NOT have CHECK constraints for IS NOT NULL (should be inline in CREATE TABLE), got:\n{}\nFull schema:\n{}",
+        not_null_check_lines.join("\n"),
+        schema_content
+    );
+
+    assert!(
+        schema_content.contains("NOT NULL"),
+        "NOT NULL should appear inline in CREATE TABLE, but schema is:\n{}",
+        schema_content
+    );
+
+    drop(container);
+    Ok(())
+}
+
+async fn setup_create_schema_test(database_url: &str) -> Result<()> {
+    let mut create_client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        false,
+    )
+    .await?;
+
+    create_client.create_database().await?;
+    drop(create_client);
+
+    let mut client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        true,
+    )
+    .await?;
+
+    client.execute("CREATE SCHEMA auth;", false).await?;
+    client
+        .execute(
+            r#"CREATE TABLE auth."group" (name TEXT PRIMARY KEY);"#,
+            false,
+        )
+        .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_dump_postgres_includes_create_schema() -> Result<()> {
+    let container = GenericImage::new("postgres", "18.0")
+        .with_exposed_port(5432.tcp())
+        .with_wait_for(WaitFor::message_on_stdout(
+            "database system is ready to accept connections",
+        ))
+        .with_env_var("POSTGRES_DB", "development")
+        .with_env_var("POSTGRES_USER", "postgres")
+        .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
+        .start()
+        .await
+        .expect("Failed to start postgres");
+    let host_port = container.get_host_port_ipv4(5432).await?;
+    let url = format!(
+        "postgres://postgres:mysecretpassword@localhost:{}/app?sslmode=disable",
+        host_port
+    );
+
+    let tmp_dir = TempDir::new()?;
+    let migrations_folder = tmp_dir.path().to_str().unwrap().to_string();
+    setup_create_schema_test(&url).await?;
+
+    dump(
+        url.clone(),
+        None,
+        "schema_migrations".to_string(),
+        migrations_folder.to_string(),
+        "schema_test_schema.sql".to_string(),
+        Some(30),
+    )
+    .await?;
+
+    let schema_path = Path::new(&migrations_folder).join("schema_test_schema.sql");
+    let schema_content = fs::read_to_string(&schema_path)?;
+
+    assert!(
+        schema_content.contains("CREATE SCHEMA IF NOT EXISTS auth;"),
+        "Schema should contain 'CREATE SCHEMA IF NOT EXISTS auth;', got:\n{}",
+        schema_content
+    );
+
+    let create_schema_pos = schema_content.find("CREATE SCHEMA").unwrap_or(usize::MAX);
+    let create_table_pos = schema_content.find("CREATE TABLE").unwrap_or(usize::MAX);
+
+    assert!(
+        create_schema_pos < create_table_pos,
+        "CREATE SCHEMA should appear before CREATE TABLE. Schema positions - SCHEMA: {}, TABLE: {}\nFull schema:\n{}",
+        create_schema_pos,
+        create_table_pos,
+        schema_content
+    );
+
+    drop(container);
+    Ok(())
+}
+
+async fn setup_on_update_test(database_url: &str) -> Result<()> {
+    let mut create_client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        false,
+    )
+    .await?;
+
+    create_client.create_database().await?;
+    drop(create_client);
+
+    let mut client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        true,
+    )
+    .await?;
+
+    client
+        .execute(
+            r#"CREATE TABLE onupdate_parent (id TEXT PRIMARY KEY, name TEXT NOT NULL);"#,
+            false,
+        )
+        .await?;
+
+    client.execute(
+        r#"CREATE TABLE onupdate_child (
+            id TEXT PRIMARY KEY,
+            parent_id TEXT NOT NULL REFERENCES onupdate_parent(id) ON DELETE CASCADE ON UPDATE CASCADE
+        );"#,
+        false,
+    ).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_dump_postgres_on_update_cascade() -> Result<()> {
+    let container = GenericImage::new("postgres", "18.0")
+        .with_exposed_port(5432.tcp())
+        .with_wait_for(WaitFor::message_on_stdout(
+            "database system is ready to accept connections",
+        ))
+        .with_env_var("POSTGRES_DB", "development")
+        .with_env_var("POSTGRES_USER", "postgres")
+        .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
+        .start()
+        .await
+        .expect("Failed to start postgres");
+    let host_port = container.get_host_port_ipv4(5432).await?;
+    let url = format!(
+        "postgres://postgres:mysecretpassword@localhost:{}/app?sslmode=disable",
+        host_port
+    );
+
+    let tmp_dir = TempDir::new()?;
+    let migrations_folder = tmp_dir.path().to_str().unwrap().to_string();
+    setup_on_update_test(&url).await?;
+
+    dump(
+        url.clone(),
+        None,
+        "schema_migrations".to_string(),
+        migrations_folder.to_string(),
+        "onupdate_test_schema.sql".to_string(),
+        Some(30),
+    )
+    .await?;
+
+    let schema_path = Path::new(&migrations_folder).join("onupdate_test_schema.sql");
+    let schema_content = fs::read_to_string(&schema_path)?;
+
+    assert!(
+        schema_content.contains("ON UPDATE CASCADE"),
+        "Schema should contain 'ON UPDATE CASCADE' for foreign key, got:\n{}",
+        schema_content
+    );
+
+    assert!(
+        schema_content.contains("ON DELETE CASCADE"),
+        "Schema should contain 'ON DELETE CASCADE' for foreign key, got:\n{}",
+        schema_content
+    );
+
+    drop(container);
+    Ok(())
+}
+
+async fn setup_reimport_test(database_url: &str) -> Result<()> {
+    let mut create_client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        false,
+    )
+    .await?;
+
+    create_client.create_database().await?;
+    drop(create_client);
+
+    let mut client = database_drivers::new(
+        database_url.to_string(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        true,
+    )
+    .await?;
+
+    let queries = vec![
+        "CREATE SCHEMA auth;",
+        r#"CREATE TABLE auth.users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE);"#,
+        r#"CREATE TABLE auth.posts (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            author_id TEXT NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+            status smallint NOT NULL,
+            CONSTRAINT posts_status_nonzero CHECK (status <> 0)
+        );"#,
+        "CREATE INDEX idx_posts_author ON auth.posts(author_id);",
+    ];
+
+    for query in queries {
+        client.execute(query, false).await?;
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_dump_postgres_schema_reimport() -> Result<()> {
+    let container = GenericImage::new("postgres", "18.0")
+        .with_exposed_port(5432.tcp())
+        .with_wait_for(WaitFor::message_on_stdout(
+            "database system is ready to accept connections",
+        ))
+        .with_env_var("POSTGRES_DB", "development")
+        .with_env_var("POSTGRES_USER", "postgres")
+        .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
+        .start()
+        .await
+        .expect("Failed to start postgres");
+    let host_port = container.get_host_port_ipv4(5432).await?;
+    let url = format!(
+        "postgres://postgres:mysecretpassword@localhost:{}/app?sslmode=disable",
+        host_port
+    );
+
+    let tmp_dir = TempDir::new()?;
+    let migrations_folder = tmp_dir.path().to_str().unwrap().to_string();
+    setup_reimport_test(&url).await?;
+
+    dump(
+        url.clone(),
+        None,
+        "schema_migrations".to_string(),
+        migrations_folder.to_string(),
+        "reimport_test_schema.sql".to_string(),
+        Some(30),
+    )
+    .await?;
+
+    let schema_path = Path::new(&migrations_folder).join("reimport_test_schema.sql");
+    let schema_content = fs::read_to_string(&schema_path)?;
+
+    let mut reimport_client = database_drivers::new(
+        url.clone(),
+        None,
+        "schema_migrations".to_string(),
+        "./migrations".to_string(),
+        "schema.sql".to_string(),
+        Some(30),
+        false,
+    )
+    .await?;
+
+    let result = reimport_client.execute(&schema_content, false).await;
+
+    assert!(
+        result.is_ok(),
+        "Re-importing schema should succeed without errors. Schema content:\n{}\nError: {:?}",
+        schema_content,
+        result.err()
+    );
+
+    drop(container);
+    Ok(())
+}

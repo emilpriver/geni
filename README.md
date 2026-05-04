@@ -25,6 +25,7 @@ The application is developed using the Rust programming language and relies on t
 - Running migrations in a transaction
 - Status command to see which migrations that is pending to be applied 
 - Dump a schema.sql after each migration which can be used in version control
+  - **Note:** The dumped schema file is intended only for schema diffs and version control reference. It should NOT be used to re-apply or reconstruct the database schema.
   - Dumping needs another binaries to work:
     - Postgres: Works without need for another binary. Uses SQL code to get schema
     - MySQL: `mysqldump` need to be installed(already installed in docker)
