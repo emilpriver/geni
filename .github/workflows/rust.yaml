@@ -34,11 +34,14 @@ jobs:
               sudo apt-get install -qq gcc-i686-linux-gnu
               sudo apt-get install -qq libssl-dev
               sudo apt-get install -qq gcc-multilib
-            env: {}
+            env:
+              TARGET: i686-unknown-linux-gnu
+              CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER: i686-linux-gnu-gcc
           - os: linux
             image: ubuntu-latest
             arch: amd64
-            env: {}
+            env:
+              TARGET: x86_64-unknown-linux-gnu
           - os: linux
             image: ubuntu-latest
             arch: arm
@@ -47,7 +50,8 @@ jobs:
               sudo apt-get install -qq gcc-arm-linux-gnueabi 
               sudo apt-get install -qq libssl-dev
             env: 
-              TARGET: aarch64-unknown-linux-gnu
+              TARGET: armv7-unknown-linux-gnueabi
+              CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABI_LINKER: arm-linux-gnueabi-gcc
           - os: linux
             image: ubuntu-latest
             arch: arm64
@@ -57,16 +61,17 @@ jobs:
               sudo apt-get install -qq libssl-dev
             env:
               TARGET: aarch64-unknown-linux-gnu
+              CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
           - os: macos
             image: macos-latest
             arch: amd64
             env:
-              TARGET: aarch64-apple-darwin
+              TARGET: x86_64-apple-darwin
           - os: macos
             image: macos-latest
             arch: arm64
             env: 
-              TARGET: x86_64h-apple-darwin
+              TARGET: aarch64-apple-darwin
           - os: windows
             image: windows-latest
             arch: amd64
@@ -81,6 +86,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4  
       - name: Setup environment
+        if: matrix.setup
         run: ${{ matrix.setup }}
       - name: Install compiler for Windows
         if: ${{matrix.os == 'windows'}}
@@ -91,18 +97,20 @@ jobs:
       - if: ${{matrix.os == 'windows'}}
         name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1.12.1
+      - name: Install Rust target
+        run: rustup target add $TARGET
       - name: Build
-        run: cargo build --release --verbose
+        run: cargo build --release --verbose --target $TARGET
       - name: Rename package 
         if: ${{matrix.os != 'windows'}}
         shell: bash
         run: |
-          cp target/release/geni geni-${{matrix.os}}-${{matrix.arch}}
+          cp target/$TARGET/release/geni geni-${{matrix.os}}-${{matrix.arch}}
       - name: Rename package 
         if: ${{matrix.os == 'windows'}}
         shell: bash
         run: |
-          cp target/release/geni.exe geni-${{matrix.os}}-${{matrix.arch}}
+          cp target/$TARGET/release/geni.exe geni-${{matrix.os}}-${{matrix.arch}}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}
