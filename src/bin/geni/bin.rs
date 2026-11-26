@@ -16,8 +16,18 @@ async fn resolve_database_connection_or_exit(
     }
 }
 
+fn main() {
+    match dotenvy::from_path(".env") {
+        Err(error) if !error.not_found() => {
+            eprintln!("Failed to load .env configuration");
+            std::process::exit(1);
+        }
+        _ => run(),
+    }
+}
+
 #[tokio::main]
-async fn main() {
+async fn run() {
     TermLogger::init(
         LevelFilter::Info,
         Config::default(),

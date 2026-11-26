@@ -111,6 +111,14 @@ geni help   # Print help message
 
 ## Environment variables
 
+Geni loads environment defaults from an optional `.env` in the working directory.
+Variables already set in the process take precedence, and command-line flags such as
+`--database-url` override their corresponding environment variables.
+
+```dotenv
+DATABASE_URL=sqlite://./database.sqlite
+```
+
 - `DATABASE_MIGRATIONS_FOLDER`
     - Specify where geni should look for migrations to run.
     - Default: `./migrations`

@@ -1432,6 +1432,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "clap",
+ "dotenvy",
  "futures",
  "libsql",
  "log",
